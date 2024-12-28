@@ -12,17 +12,22 @@ namespace horn_verification
 
 	void pretty_print_visitor::visit(categorical_node & n)
 	{
-		
+		//_out << "Categorical Node: \n";
+
+		int childc = 0;
+
 		for (unsigned int i = 0; i < _indent; ++i)
 		{
 			_out << " ";
 		}
 		
 		_out << "switch x[" << n.attribute() << "]";
-		
+
 		++_indent;
+		++childc;
 		for (const auto & child : n.children())
 		{
+			//std::cout << "Child :: " << childc <<"\n";
 			_out << std::endl;
 			if (child)
 			{
@@ -41,13 +46,12 @@ namespace horn_verification
 			
 		}
 		--_indent;
-
 	}
 		
 
 	void pretty_print_visitor::visit(int_node & n)
 	{
-		
+		//_out << "Int Node: \n";
 		for (unsigned int i = 0; i < _indent; ++i)
 		{
 			_out << " ";
@@ -76,20 +80,20 @@ namespace horn_verification
 			
 		}
 		--_indent;
-
+		//_out << "\n";
 	}
 		
 		
 	void pretty_print_visitor::visit(leaf_node & n)
 	{
-		
+		//_out << "Leaf Node: \n";
 		for (unsigned int i = 0; i < _indent; ++i)
 		{
 			_out << " ";
 		}
-		
+
 		_out << (n.output() ? "true" : "false"); 
-		
+		//_out << "\n";
 	}
 
 	

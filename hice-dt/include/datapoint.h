@@ -73,6 +73,7 @@ namespace horn_verification
 			out << "[";
 
 			// Categorical attributes
+			out << "C";
 			for (auto it = dp._categorical_data.cbegin(); it != dp._categorical_data.cend(); ++it)
 			{
 				out << (it == dp._categorical_data.cbegin() ? "" : ", ") << *it;
@@ -82,6 +83,7 @@ namespace horn_verification
 				out << ", " ;
 			}
 
+			out << "I";
 			// Int attributes
 			for (auto it = dp._int_data.cbegin(); it != dp._int_data.cend(); ++it)
 			{

@@ -143,6 +143,8 @@ void print_help(std::ostream & out, const char * name)
 
 decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 
+  std::cout << "In :: " << __FUNCTION__ << "\n";
+  
 	//
 	// Run the learner and allow a graceful exit if something goes wrong
 	//
@@ -200,6 +202,10 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 			//
 			auto horn_constraints = boogie_io::indexes2horn_constraints(horn_indexes, datapoints_copy);
 
+			std::cout << "Printing Horn Constraints\n";
+			for (auto const &hc : horn_constraints){
+			  std::cout << hc << "\n";
+			}
 
 			//
 			// Run Horndini
@@ -238,7 +244,7 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 		//
 		bool terminate;
 		do
-		{
+		 {
 			terminate = !cur_bound.use_bound();
 
 
@@ -248,6 +254,13 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 			try
 			{
 
+#ifdef DP
+			  std::cout << __FUNCTION__ << "::Printing Datapoints length :" << datapoints.size()<< "\n";
+			  std::cout << __FUNCTION__ << "::Printing Datapoints \n";
+				for(auto dp : datapoints){
+				  std::cout << dp << "\n";
+				}
+#endif			
 				//
 				// Create copy of data points and pointers thereof
 				//
@@ -270,6 +283,18 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 				//
 				auto horn_constraints = boogie_io::indexes2horn_constraints(horn_indexes, datapoints_copy);
 
+				// std:: cout << "printing horn indexes\n";
+				// for(auto const &hi : horn_indexes){
+				//   std::cout << "horn index: " << hi;
+				// }
+
+#ifdef DP
+				std:: cout << __FUNCTION__ << "::#horn constraints :" << horn_constraints.size() << "\n";
+				for(auto const &hc : horn_constraints){
+				  std::cout << "horn constraint:" << hc << "\n";
+				}
+#endif
+				
 				//
 				// Create bound constraints if necessary
 				//
@@ -293,6 +318,22 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 				std::unordered_set<datapoint<bool> *> positive_ptrs;
 				std::unordered_set<datapoint<bool> *> negative_ptrs;
 
+				// std::cout << "Printing Positive Datapoints length :"<< positive_ptrs.size()<< "\n";
+				// for(auto pdp : positive_ptrs){
+				//   std::cout << *pdp << "\n";
+				// }
+
+				// std::cout << "Printing Negative Datapoints length :" << negative_ptrs.size()<< "\n";
+				// for(auto ndp : negative_ptrs){
+				//   std::cout << *ndp << "\n";
+				// }
+
+				// std::cout << "Printing Datapoints length :" << datapoint_ptrs.size()<< "\n";
+				// for(auto dp : datapoint_ptrs){
+				//   std::cout << *dp << "\n";
+				// }
+
+				
 				// Initial run
 				auto ok = solver.solve(datapoint_ptrs, horn_constraints, positive_ptrs, negative_ptrs);
 				
@@ -392,3 +433,4 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 }
 
 #endif
+

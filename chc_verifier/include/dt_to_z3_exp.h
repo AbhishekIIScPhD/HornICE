@@ -40,11 +40,13 @@ namespace chc_teacher
 			dt_to_z3_exp(const std::vector<std::vector<z3::expr>> & variables, std::unordered_map<unsigned, z3::func_decl> & ID2relation, std::unordered_map<unsigned, z3::expr> & integer_identifier_to_attribute)
 				: _set_of_variables(variables), _ID2relation(ID2relation), _integer_identifier_to_attribute(integer_identifier_to_attribute), _ctx((_ID2relation.begin())->second.ctx())
 			{
+				// std::cout << "In::" << __FUNCTION__ <<"\n";
 				//Nothing to do
 			}
 
 			std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> get_unordered_map(horn_verification::base_node *node) const {
-				
+
+				std::cout << "In::" << __FUNCTION__ << "\n";
 				std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> map_z3_expr;
 
 				horn_verification::categorical_node* categorical_child = dynamic_cast<horn_verification::categorical_node*> (node);

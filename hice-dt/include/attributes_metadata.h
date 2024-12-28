@@ -132,19 +132,21 @@ namespace horn_verification
 		 */
 		friend std::ostream & operator<<(std::ostream & out, const attributes_metadata & data)
 		{
-			
-			out << "Categorical attributes: ";
+		  
+		  out << "Categorical attributes: ";
 			for (std::size_t i = 0; i < data._categorical_names.size(); ++i)
 			{
 				out << (i > 0 ? ", " : "") << data._categorical_names[i] << " (" << data._number_of_categories[i] << ")";
 			}
-			
+
+
 			out << std::endl << "Integer attributes: ";
+#ifdef ATTR
 			for (std::size_t i = 0; i < data._int_names.size(); ++i)
 			{
 				out << (i > 0 ? ", " : "") << data._int_names[i];
 			}
-			
+#endif
 			return out;
 			
 		}

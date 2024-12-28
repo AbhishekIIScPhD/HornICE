@@ -12,13 +12,14 @@
 // Project includes
 #include "job.h"
 
-
+#define DT
 namespace horn_verification
 {
 
 	std::vector<slice> categorical_split_job::run(std::vector<datapoint<bool> *> & datapoint_ptrs, const attributes_metadata & metadata)
 	{
 
+	  	  std::cout << "In  chc " << __FUNCTION__ <<"\n";
 		// 0) Check parameters
 		// Because the learner in connection with the Boogie teacher needs to split on the unique categoricla attribute, in the first round this slice can be of a single data point
 		//assert (_slice._left_index < _slice._right_index); 
@@ -30,6 +31,23 @@ namespace horn_verification
 	
 		// 2) Create new categorical node
 		auto new_node = new categorical_node(_attribute, metadata.number_of_categories()[_attribute]);
+		std::cout << __FUNCTION__ << "::New Categorical Node  attribute: " << new_node->attribute() << "\n";
+
+		for (auto const &can : new_node->children()) {
+			std::cout << __FUNCTION__ << "::Categorical node child :" << can << "\n";
+		}
+#ifdef DT
+		std::cout << __FUNCTION__ << "::Categorical Node Metadata \n";
+		std::cout << metadata;
+		// std::cout << "Number of categories: " << metadata.number_of_categories() << "\n";
+		// std::cout << "Printing all the categories\n";
+		// for(auto const &i : metadata.categorical_names()) {
+		// 	std::cout << "Category Name : " << i << "\n";
+		// }
+#endif
+
+
+
 		*(_slice._node_ptr) = new_node;
 	
 		// 3) Create new tasks 
@@ -61,7 +79,7 @@ namespace horn_verification
 
 	std::vector<slice> int_split_job::run(std::vector<datapoint<bool> *> & datapoint_ptrs, const attributes_metadata & metadata)
 	{
-	
+		  std::cout << "In chc " << __FUNCTION__ <<"\n";
 		// 0) Check parameters
 		assert (_slice._left_index < _slice._right_index);
 	
@@ -97,7 +115,7 @@ namespace horn_verification
 	
 	std::vector<slice> leaf_creation_job::run(std::vector<datapoint<bool> *> & datapoint_ptrs, const attributes_metadata & metadata)
 	{
-		
+	  std::cout << "In chc " << __FUNCTION__ <<"\n";
 		// 0) Check parameters
 		assert (_slice._left_index <= _slice._right_index);
 		

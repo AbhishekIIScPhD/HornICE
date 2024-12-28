@@ -188,10 +188,12 @@ namespace chc_teacher
 					assert (expr.decl().name().str() != "verifier.error");
 					assert (!is_negated);
 					// TODO: check that the expressions in the arguments do not contain predicates to synthesize
-					
+
+					std::cout << "SMTlIB :: expr : " << expr << "\n";
 					// Store expression of predicate
 					relation_expressions.insert(expr);
-					
+
+					std::cout << "SMTlIB :: expr_decl : " << expr.decl() << "\n";
 					// Store declaration of predicates
 					relations.insert(expr.decl());
 					
@@ -232,7 +234,7 @@ namespace chc_teacher
 			//
 			z3::fixedpoint fp(ctx);
 			Z3_ast_vector r = Z3_fixedpoint_from_file(ctx, fp, filename.c_str());
-			// std::cout << fp << std::endl;
+			std::cout << fp << std::endl;
 			fp.check_error();
 			auto z3_queries = z3::expr_vector(ctx, r);
 			
@@ -243,17 +245,20 @@ namespace chc_teacher
 			//
 			auto rules = preprocess_expressions(ctx, fp.rules(), relations);
 			auto queries = preprocess_expressions(ctx, z3_queries, relations);
-			// std::cout << std::endl << "Read " << rules.size() << " rules and " << queries.size() << " queries (" << z3_queries.size() << ")" << std::endl;
+			std::cout << std::endl << "Read " << rules.size() << " rules and " << queries.size() << " queries (" << z3_queries.size() << ")" << std::endl;
 						
-			
+
 			//
 			// Process queries
 			//
 			for (unsigned i = 0; i < queries.size(); ++i)
 			{
-				
 				const auto & expr = queries[i];
-				
+
+				std::cout << "\n---------- Query " << i << " ----------" << std::endl;
+				std::cout << expr << std::endl;
+
+
 				// Normal query
 				if (expr.is_app() && expr.decl().decl_kind() == Z3_decl_kind::Z3_OP_UNINTERPRETED && expr.decl().arity() > 0)
 				{
@@ -273,6 +278,9 @@ namespace chc_teacher
 					expr_set lhs_predicate_expressions;
 					decl_set chc_declarations;
 					extract_relations(expr, chc_declarations, lhs_predicate_expressions);
+					for (auto declr : chc_declarations) {
+						std::cout << "chc_declarations: " << declr << "\n";
+					}
 					assert (lhs_predicate_expressions.size() == 1);
 
 					// Store as Horn constraint
@@ -299,8 +307,8 @@ namespace chc_teacher
 				
 				const auto & expr = rules[i];
 				
-				// std::cout << "\n---------- Rule " << i << " ----------" << std::endl;
-				// std::cout << expr << std::endl;
+				std::cout << "\n---------- Rule " << i << " ----------" << std::endl;
+				std::cout << expr << std::endl;
 				
 				
 				//
@@ -334,7 +342,7 @@ namespace chc_teacher
 					}
 					
 				}
-				
+
 				//
 				// Rule is a forall expression
 				//
@@ -347,12 +355,16 @@ namespace chc_teacher
 					// Total number of quantifier variables
 					unsigned num_vars = Z3_get_quantifier_num_bound(ctx, expr);
 					// Set of uninterpreted predicates occurring in the CHC
-					decl_set chc_declarations;
+					decl_set PLLab321
+					;
 			
-			
+
+					expr_set rhs_predicate_expressions;
+					extract_relations(expr, chc_declarations, rhs_predicate_expressions);
+
 					//
 					// Substitute quantified variables by new constants
-					//
+
 					z3::expr_vector new_constants(ctx);
 					for (unsigned i = 0; i < num_vars; ++i)
 					{
@@ -422,7 +434,7 @@ namespace chc_teacher
 						//
 						expr_set rhs_predicate_expressions;
 						extract_relations(body.arg(1), chc_declarations, rhs_predicate_expressions);
-						
+						// std::cout << "RHS predicate expressions : " << rhs_predicate_expressions << "\n";
 						
 						//
 						// Store CHC
@@ -451,7 +463,16 @@ namespace chc_teacher
 				}
 				
 			}
-			
+
+			std::cout << "\n Printing processed queries \n";
+
+			// for(auto chc : chcs) {
+			// 	std::cout << "chc :: " << chc << "\n";
+			// }
+			//
+			// for(auto rel : relations) {
+			// 	std::cout << "rel :: " << rel << "\n";
+			// }
 			
 			return problem(std::move(relations), std::move(chcs));
 			

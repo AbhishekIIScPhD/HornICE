@@ -21,7 +21,8 @@ namespace horn_verification
 		// 0) Check parameters
 		// Because the learner in connection with the Boogie teacher needs to split on the unique categoricla attribute, in the first round this slice can be of a single data point
 		//assert (_slice._left_index < _slice._right_index); 
-		
+	  
+	  std::cout << "In hice " << __PRETTY_FUNCTION__ <<"\n";
 		// 1) Sort datapoints 
 		auto comparer = [this](const datapoint<bool> * const a, const datapoint<bool> * const b) { return a->_categorical_data[this->_attribute] < b->_categorical_data[this->_attribute]; };
 		std::sort(datapoint_ptrs.begin() + _slice._left_index, datapoint_ptrs.begin() + _slice._right_index + 1, comparer);
@@ -60,7 +61,8 @@ namespace horn_verification
 
 	std::vector<slice> int_split_job::run(std::vector<datapoint<bool> *> & datapoint_ptrs, const attributes_metadata & metadata)
 	{
-	
+
+	  std::cout << "In" << __PRETTY_FUNCTION__ <<"\n";
 		// 0) Check parameters
 		assert (_slice._left_index < _slice._right_index);
 	
@@ -96,7 +98,7 @@ namespace horn_verification
 	
 	std::vector<slice> leaf_creation_job::run(std::vector<datapoint<bool> *> & datapoint_ptrs, const attributes_metadata & metadata)
 	{
-		
+	  std::cout << "In" << __PRETTY_FUNCTION__ <<"\n";
 		// 0) Check parameters
 		assert (_slice._left_index <= _slice._right_index);
 		

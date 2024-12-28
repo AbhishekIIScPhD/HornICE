@@ -173,7 +173,8 @@ namespace chc_teacher
 		
 		static std::unique_ptr<horn_counterexample> check_chc(z3::context & ctx, const constrainted_horn_clause & chc, const std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> & conjectures)
 		{
-			
+
+		  // std::cout << "In::" << __FUNCTION__ <<"\n";
 			// // // std::cout << std::endl << "========== PERFORMING CHECK OF CHC ==========" << std::endl << std::endl;
 
 
@@ -181,9 +182,11 @@ namespace chc_teacher
 			// 1. Get CHC to check
 			//
 			z3::expr chc_expr = chc.expr;
-			// // // std::cout << "Original expression is " << std::endl << chc_expr << std::endl;
+#ifdef DEBUG
+			std::cout << "Original expression is " << std::endl << chc_expr << std::endl;
+#endif
 
-			
+
 			//
 			// 2. Substitute uninterpreted predicates in CHC with conjectures
 			//
@@ -196,15 +199,18 @@ namespace chc_teacher
 				// Check that variable count matches
 				assert (pred_conjecture.variables.size() == decl.arity());
 
-				// // // std::cout << "Substitutinng " << decl << " with " << pred_conjecture << std::endl;
-				
+#ifdef DEBUG
+				std::cout << "Substitutinng " << decl << " with " << pred_conjecture << std::endl;
+#endif
 				// Do substitution
 				chc_expr = z3_helper::substitute(ctx, chc_expr, decl, pred_conjecture.expr, pred_conjecture.variables);
 			
 			}
-			// // // std::cout << "---------- CHC after substituting ----------" << std::endl;
-			// // // std::cout << chc_expr << std::endl;
-			
+
+#ifdef DEBUG
+			std::cout << "---------- CHC after substituting ----------" << std::endl;
+			std::cout << chc_expr << std::endl;
+#endif
 			
 			//
 			// 3. Create solver and create final satifiability problem
@@ -214,8 +220,9 @@ namespace chc_teacher
 			z3::solver solver(ctx);
 			// Add negated CHC to solver
 			solver.add(!chc_expr);
-			// // // std::cout << "---------- Solver ----------" << std::endl << solver << std::endl;
-			
+#ifdef DEBUG
+			std::cout << "---------- Solver ----------" << std::endl << solver << std::endl;
+#endif
 			
 			//
 			// 4. Solve
@@ -230,7 +237,7 @@ namespace chc_teacher
 			// Unsat
 			if (result == z3::check_result::unsat)
 			{
-				// // // std::cout << "UNSAT!!" << std::endl;
+				// std::cout << "UNSAT!!" << std::endl;
 				return std::unique_ptr<horn_counterexample>();
 			}
 			
@@ -248,8 +255,9 @@ namespace chc_teacher
 				
 				// Get model
 				auto model = solver.get_model();
-				// // // std::cout << "---------- Model ----------" << std::endl << model << std::endl;
-				
+#ifdef DEBUG
+				std::cout << "---------- Model ----------" << std::endl << model << std::endl;
+#endif
 				
 				std::list<datapoint> lhs;
 				std::list<datapoint> rhs;
