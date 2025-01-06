@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 // C includes
 #include <cassert>
@@ -29,7 +30,7 @@
 #include "dt_to_z3_exp.h"
 #include "pretty_print_visitor.h" // DEBUG
 
-
+#define DT
 namespace chc_teacher
 {
 	
@@ -90,6 +91,7 @@ namespace chc_teacher
 		 */
 		learner_interface(const decl_set & relations, bool do_horndini_prephase, bool use_bounds) {
 
+		  std::cout << "In " << __FUNCTION__ << "\n";
 			categorical_identifier = 0;
 
 			integer_identifier = 0;
@@ -105,8 +107,10 @@ namespace chc_teacher
 			//
 			// Check number of argument of predicates
 			//
+			std::cout << __FUNCTION__ << ":: relations in the CHCs : \n";
 			for (const auto & decl : relations)
 			{
+				std::cout << decl << "\n";
 				if (decl.arity() == 0)
 				{
 					throw std::runtime_error("Uninterpreted predicates with no arguments are not allowed");
@@ -124,11 +128,19 @@ namespace chc_teacher
 				//
 				relation2ID.emplace(decl, categorical_identifier);
 
+				std::cout << __FUNCTION__ << " :: Relation : " << decl << " is mapped to CatID :  " << categorical_identifier << "\n";
+
 				categorical_identifier_to_relation.emplace(categorical_identifier, decl);
-				
+
+				std::cout << __FUNCTION__ << "CatID : " << categorical_identifier << " is mapped to Relation : " << decl << "\n";
+
 				// TODO: Perhaps we also want to store the arity of each relation so as to easily compute the position of data in a DT data point object
 			
 				relation_to_base_value.emplace(decl, integer_identifier);
+
+				std::cout << __FUNCTION__ << "Relation : " << decl << " is mapped to baseval :  " << integer_identifier << "\n";
+
+				z3::context c;
 
 				//
 				// Create variables / expression for each argument of the relation
@@ -148,10 +160,88 @@ namespace chc_teacher
 
 					attributes.push_back(decl.ctx().constant(attributeName.c_str(), attributeSort));
 					integer_identifier_to_attribute.emplace(integer_identifier++, decl.ctx().constant(attributeName.c_str(), attributeSort));
+					std::cout << "Attribute Identifier : " << integer_identifier << " attribute : " << attributeName.c_str() << attributeSort << "\n";
 
 					api_object.add_integer_attribute(attributeName);
 
-				}
+				}		
+
+#ifdef EXTRA_ATTR
+				
+				//adding derived attributes
+				if(decl.arity() > 2)
+				  {
+				    for (unsigned first_index = 0; first_index < attributes.size(); first_index++) {
+				      for (unsigned second_index = first_index+1; second_index < attributes.size(); second_index++) {
+					for (unsigned third_index = first_index+2; third_index < attributes.size(); third_index++) {
+					  if (attributes.at(first_index).get_sort().is_int() && attributes.at(second_index).get_sort().is_int()&& attributes.at(third_index).get_sort().is_int()) {
+
+					    std::vector<int> numbers;
+					    numbers.push_back(first_index);
+					    numbers.push_back(second_index);
+					    numbers.push_back(third_index);
+
+					    std::sort(numbers.begin(), numbers.end());
+
+					    // Generate all permutations using next_permutation
+					    do {
+					      std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
+					      firstAttributeStream << attributes.at(numbers[0]);
+					      secondAttributeStream << attributes.at(numbers[1]);
+					      thirdAttributeStream << attributes.at(numbers[2]);
+
+					      //==================
+					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) + attributes.at(numbers[1])+attributes.at(numbers[2]));
+					      api_object.add_integer_attribute(firstAttributeStream.str() + "+" + secondAttributeStream.str() + "+" + thirdAttributeStream.str());
+					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) + attributes.at(numbers[1]) + attributes.at(numbers[2]) << "\n";
+
+					      //==================					      
+					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) - attributes.at(numbers[1])-attributes.at(numbers[2]));
+					      api_object.add_integer_attribute(firstAttributeStream.str() + "-" + secondAttributeStream.str() + "-" + thirdAttributeStream.str());
+					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) - attributes.at(numbers[1]) - attributes.at(numbers[2]) << "\n";
+
+					      //==================
+					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) + attributes.at(numbers[1])-attributes.at(numbers[2]));
+					      api_object.add_integer_attribute(firstAttributeStream.str() + "+" + secondAttributeStream.str() + "-" + thirdAttributeStream.str());
+					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) + attributes.at(numbers[1]) - attributes.at(numbers[2]) << "\n";
+
+					      //==================
+					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) - attributes.at(numbers[1])+attributes.at(numbers[2]));
+					      api_object.add_integer_attribute(firstAttributeStream.str() + "-" + secondAttributeStream.str() + "+" + thirdAttributeStream.str());
+					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) - attributes.at(numbers[1]) + attributes.at(numbers[2]) << "\n";
+
+					    } while (std::next_permutation(numbers.begin(), numbers.end()));
+					  }
+					}
+				      }
+				    }
+				  }
+#endif				
+				
+				// if( decl.name().str() == "inv2") {
+				// 	std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
+
+				// 	firstAttributeStream << attributes.at(1);
+				// 	secondAttributeStream << attributes.at(2);
+				// 	thirdAttributeStream << attributes.at(3);
+
+				// 	integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(3) + attributes.at(2) - attributes.at(1));
+				// 	std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(3) + attributes.at(2) - attributes.at(1) << "args::"<< (attributes.at(3) + attributes.at(2) - attributes.at(1)).arg(0) <<"\n";
+				// 	api_object.add_integer_attribute(thirdAttributeStream.str() + "+" + secondAttributeStream.str() + "-" + firstAttributeStream.str());
+				// }
+
+				// if( decl.name().str() == "inv1") {
+				// 	std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
+
+				// 	firstAttributeStream << attributes.at(1);
+				// 	secondAttributeStream << attributes.at(2);
+				// 	thirdAttributeStream << attributes.at(3);
+
+				// 	integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(3) + attributes.at(2) - attributes.at(1));
+				// 	std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(3) + attributes.at(2) - attributes.at(1) << "\n";
+				// 	api_object.add_integer_attribute(thirdAttributeStream.str() + "+" + secondAttributeStream.str() + "-" + firstAttributeStream.str());
+				// }
+
 
 				//
 				// Adding derived attributes
@@ -170,33 +260,46 @@ namespace chc_teacher
 
 							integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(first_index) + attributes.at(second_index));
 
+
 							api_object.add_integer_attribute(firstAttributeStream.str() + "+" + secondAttributeStream.str());
+							std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(first_index) + attributes.at(second_index) << "\n";
 
 							integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(first_index) - attributes.at(second_index));
 
 							api_object.add_integer_attribute(firstAttributeStream.str() + "-" + secondAttributeStream.str());
+							std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(first_index) - attributes.at(second_index) << "\n";
+							
 
 						}
 					}
 				}
-
 				variables.push_back(std::move(attributes));
 				categorical_identifier++;
 				api_object.add_intervals(left, (integer_identifier - 1));
 			}
-
 			api_object.add_categorical_attribute("$func", categorical_identifier);
 		}
 
 	horn_verification::datapoint<bool>* get_unique_learner_datapoint(const chc_teacher::datapoint &teacher_datapoint) const {
-
+		std::cout << "In::" << __FUNCTION__ <<"\n";
+			std::cout << "=============\n";
+	  std::cout << __FUNCTION__ << "::Current Teacher Datapoint: " << teacher_datapoint << "\n";
 		if (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint) == teacher_datapoint_to_learner_datapoint.end()) { 
 
 			horn_verification::datapoint<bool> current_learner_datapoint(api_object.index_of_datapoint_ptrs());
+
+			horn_verification::attributes_metadata md = api_object.get_metadata();
 			
 			current_learner_datapoint._int_data = teacher_datapoint.get_int_data(relation_to_base_value, integer_identifier);
 				
 			current_learner_datapoint._categorical_data = teacher_datapoint.get_categorical_data(relation2ID);
+
+			// for (auto const &i : current_learner_datapoint._categorical_data){
+			//   std::cout << __FUNCTION__ << ":: Printing category data: " << i << "\n";
+			// }
+			// std::cout << "Current Learner Categorical data : " << current_learner_datapoint._categorical_data << "\n";
+			std::cout << __FUNCTION__ << ":: Current Teacher Datapoint: " << teacher_datapoint << "\n";
+			// std::cout << __FUNCTION__ << ":: Current Learner Datapoint: " << current_learner_datapoint << "\n";
 				
 			teacher_datapoint_to_learner_datapoint.emplace(teacher_datapoint, current_learner_datapoint);
 
@@ -229,7 +332,8 @@ namespace chc_teacher
 		 */
 		bool add_counterexample(const horn_counterexample & counterexample)
 		{
-			//
+		  std::cout << "In::"<< __FUNCTION__ << "\n";
+		        //
 			// This function should distinguish between real Horn counterexamples or positive
 			// counterexamples (left-hand-side is empty) or negative counterexample
 			// (right-hand-side is empty).
@@ -242,8 +346,17 @@ namespace chc_teacher
 			//	Positive counterexample
 			if (counterexample.lhs.size() == 0 && counterexample.rhs.size() == 1) {
 
-				horn_verification::datapoint<bool> *current_learner_datapoint = get_unique_learner_datapoint(*(counterexample.rhs.begin()));
+			  // for (auto &rhs : counterexample.rhs){
+			  //   std::cout << "Printing the current counterexample :" << rhs << "\n";			    
+			  // }
 
+			  std::cout << __FUNCTION__ << " Current counterexample : " << counterexample << "\n";
+			  std::cout << __FUNCTION__ <<" Current teacher datapoint : " << *(counterexample.rhs.begin()) << "\n";
+			  
+			  horn_verification::datapoint<bool> *current_learner_datapoint = get_unique_learner_datapoint(*(counterexample.rhs.begin()));
+
+			  std::cout << __FUNCTION__ <<" Current teacher datapoint(Positive) : " << *(counterexample.rhs.begin()) << "\n";
+			  // std::cout << __FUNCTION__ <<" Current learner datapoint(Positive) : " << *current_learner_datapoint << "\n";
 				if (current_learner_datapoint->_is_classified == true) {
 
 					if (current_learner_datapoint->_classification == false) {
@@ -260,7 +373,10 @@ namespace chc_teacher
 			else if (counterexample.lhs.size() == 1 && counterexample.rhs.size() == 0) {
 
 				horn_verification::datapoint<bool> *current_learner_datapoint = get_unique_learner_datapoint(*(counterexample.lhs.begin()));
+				std::cout << __FUNCTION__ <<" Current teacher datapoint(Negative) : " << *(counterexample.lhs.begin()) << "\n";
+				// std::cout << __FUNCTION__ <<" Current learner datapoint(Negative) : " << *current_learner_datapoint << "\n";
 
+				
 				if (current_learner_datapoint->_is_classified == true) {
 
 					if (current_learner_datapoint->_classification == true) {
@@ -295,7 +411,9 @@ namespace chc_teacher
 				}
 
 				horn_verification::horn_constraint<bool> horn_constraint(lhs_of_horn, rhs_of_horn, false);
-
+				std::cout << __FUNCTION__ <<" Current teacher datapoint(horn) : " << counterexample << "\n";
+				// std::cout << __FUNCTION__ <<" Current learner datapoint(horn) : " << horn_constraint << "\n";
+				
 				api_object.add_horn_constraints(horn_constraint);
 			}
 
@@ -317,16 +435,43 @@ namespace chc_teacher
 		 */
 		std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> get_conjectures()
 		{
+		        std::cout << "In :: " << __FUNCTION__ << "\n";
 			auto decision_tree = api_object.learn_decision_tree();
-			
+
 			horn_verification::pretty_print_visitor printer;
 
-			//decision_tree.accept(printer);
-
+#ifdef DT
+			std::cout << __FUNCTION__ << ":: Printing the Decision Tree\n";
+			decision_tree.accept(printer);
+			std::cout << "\n";
+#endif
 			//std::cout << "Hi" << std::endl;
 
+			// std::cout << "Call to map_dt_z3\n";
+			//
+			// std::cout << __FUNCTION__ << ":: Variables\n";
+			// for (auto const &var : variables) {
+			// 	for (auto const &v : var) {
+			// 		std::cout << " Variable :: " << v << "\n";
+			// 	}
+			// }
+			//
+			// std::cout << __FUNCTION__ << ":: Categorical Vars\n";
+			// for (auto const &cats : categorical_identifier_to_relation) {
+			// 		std::cout << " Int :: " << cats.first << "decl : " << cats.second << "\n";
+			// }
+			//
+			// int int_attr_no = 0;
+			// std::cout << __FUNCTION__ << ":: Integer Vars\n";
+			// for (auto const &ints : integer_identifier_to_attribute) {
+			// 	std::cout << " CAT :: " << ints.first << "expr : " << ints.second << "\n";
+			// 	std::cout << "Printed Attribute :: " << int_attr_no++ << "\n";
+			// }
+
+			// std::cout << "Done Printing\n";
 			dt_to_z3_exp map_dt_z3(variables, categorical_identifier_to_relation, integer_identifier_to_attribute);
 
+			std::cout << "Return from map_dt_z3\n";
 			return map_dt_z3.get_unordered_map(decision_tree.root());
 		}
 

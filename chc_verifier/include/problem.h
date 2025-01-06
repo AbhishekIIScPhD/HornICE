@@ -45,8 +45,8 @@ namespace chc_teacher
 			{
 				out << r << std::endl;
 			}
-			
-		
+
+
 			// Output CHCs
 			out << "---------- CHCs ----------" << std::endl;
 			for (const auto & chc : p.chcs)

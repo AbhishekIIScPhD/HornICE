@@ -8,7 +8,7 @@
 // C++ includes
 #include <algorithm>
 #include <vector>
-
+#include <iostream>
 
 namespace horn_verification
 {
@@ -89,6 +89,7 @@ namespace horn_verification
 			: _attribute(attribute), _children(number_of_categories)
 		{
 			// Nothing
+			// std::cout << "Categorical Node :: Attribute : " << _attribute << "\n";
 		}
 	
 		/**
@@ -108,7 +109,7 @@ namespace horn_verification
 					_children[i] = other._children[i]->clone();
 				}
 			}
-			
+			// std::cout << "Categorical Node :: Attribute : " << attribute  << "\n";
 		}
 		
 	

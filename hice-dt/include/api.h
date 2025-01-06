@@ -42,7 +42,7 @@ namespace horn_verification
 			}
 
 			void configure_learner (bool _do_horndini_prephase, bool _use_bounds) {
-
+				std::cout << "In " << __FUNCTION__ << "\n";
 				use_bounds = _use_bounds;
 
 				do_horndini_prephase = _do_horndini_prephase;
@@ -54,10 +54,14 @@ namespace horn_verification
 			}
 
 			void add_integer_attribute(const std::string & name) {
-
+			  std::cout << __FUNCTION__ <<"::Integer Attribute::" << name <<"\n";
 				metadata.add_int_attribute(name);
 			}
-			
+
+	                attributes_metadata get_metadata() const{
+			  return metadata;
+			}
+	  
 			void add_categorical_attribute(const std::string &name, const std::size_t &number_of_categories) {
 
 				metadata.add_categorical_attribute(name, number_of_categories);
@@ -105,7 +109,13 @@ namespace horn_verification
 			std::vector<datapoint<bool>> datapoints_copy;
 
 			datapoints_copy.reserve(datapoint_ptrs.size());
-
+#ifdef DPTR			
+			for (auto const &dptr : datapoint_ptrs){
+			  std::cout << "data pointer : " << *dptr << "\n";
+			}
+#endif
+			// TODO : Print Data points
+			
 			for (unsigned i = 0; i < datapoint_ptrs.size(); ++i) {
 
 				datapoints_copy.push_back(*datapoint_ptrs[i]);
@@ -113,7 +123,9 @@ namespace horn_verification
 				//assert (datapoint_ptrs[i]->_identifier == i);
 			}
 
+			// TODO: Understand the arguments to the learner object
 			horn_verification::api_helper learner_obj(metadata, datapoints_copy, horn_indexes, intervals);
+
 
 			return learner_obj.learn_decision_tree(do_horndini_prephase, use_bounds);
 		}

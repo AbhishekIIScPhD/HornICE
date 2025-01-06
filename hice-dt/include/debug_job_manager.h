@@ -309,7 +309,7 @@ namespace horn_verification
 				
 			}
 		
-			//std::cout << "========== " << found_true << " / " << found_false << " / " << found_unlabeled << " (+/-/?); slice is [" << sl._left_index << " - " << sl._right_index << "]" << std::endl;
+			std::cout << "========== " << found_true << " / " << found_false << " / " << found_unlabeled << " (+/-/?); slice is [" << sl._left_index << " - " << sl._right_index << "]" << std::endl;
 		
 			//
 			// Found positively and negatively classified data points, thus no leaf node
@@ -346,11 +346,11 @@ namespace horn_verification
 				}
 				
 				// Run Horn solver
-				//output_state(positive_ptrs, negative_ptrs, _horn_constraints, "\n---------- + and ? (mark +)", std::cout);
+				output_state(positive_ptrs, negative_ptrs, _horn_constraints, "\n---------- + and ? (mark +)", std::cout);
 				//horn_solver<bool> solver;
 				//auto ok = solver.solve(_datapoint_ptrs, _horn_constraints, positive_ptrs, negative_ptrs);
 				auto ok = _horn_solver.solve(_datapoint_ptrs, _horn_constraints, positive_ptrs, negative_ptrs);
-				//output_state(positive_ptrs, negative_ptrs, _horn_constraints, "\n---------- Solver result: " + std::to_string(ok), std::cout);
+				output_state(positive_ptrs, negative_ptrs, _horn_constraints, "\n---------- Solver result: " + std::to_string(ok), std::cout);
 				
 				// Labeling satisfies Horn constraints
 				if (ok)

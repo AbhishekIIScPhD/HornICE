@@ -14,7 +14,8 @@ CPPFLAGS += -I ../../hice-dt/include
 CPPFLAGS += -I ../../z3-4.7.1/src/api
 CPPFLAGS += -I ../../z3-4.7.1/src/api/c++
 CPPFLAGS += -L ../../z3-4.7.1/build
-CPPFLAGS += -std=c++14 -Ofast
+#CPPFLAGS += -O0 -g -std=c++14 -Ofast
+CPPFLAGS += -O0 -g -std=c++14
 
 all: chc_verifier
 
@@ -23,7 +24,7 @@ chc_verifier: $(OBJS)
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
-   
+
 clean:
 	rm -f *.o
 	rm -f *.exe

@@ -49,6 +49,8 @@ namespace horn_verification
 		learner(const JobManager & manager)
 			: _manager(manager)
 		{
+		  std::cout << "In :: " << __PRETTY_FUNCTION__ << "\n";
+
 			// Nothing
 		}
 	
@@ -60,6 +62,7 @@ namespace horn_verification
 		learner(JobManager && manager)
 			: _manager(std::move(manager))
 		{
+		  std::cout << "In :: " << __PRETTY_FUNCTION__ << "\n";
 			// Nothing
 		}
 	
@@ -77,6 +80,7 @@ namespace horn_verification
 		 */
 		decision_tree learn(const attributes_metadata & metadata, std::vector<datapoint<bool> *> & datapoint_ptrs, const std::vector<horn_constraint<bool>> & horn_constraints)
 		{
+		  std::cout << "In:: " << __FUNCTION__ << "\n";
 			
 			//
 			// If no data points were given, return trivial decision tree (any tree is consistent)
@@ -101,9 +105,13 @@ namespace horn_verification
 			//
 			// Create task list and add initial slice
 			//
-			_manager.add_slice(slice(0, datapoint_ptrs.size() - 1, &tree._root));
-			
-			
+			slice sl = slice(0, datapoint_ptrs.size() - 1, &tree._root);
+			_manager.add_slice(sl);
+#ifdef slice
+
+			std::cout << __FUNCTION__ << "::Printing Slice :" << sl << "\n";
+#endif
+
 			//
 			// Learning loop
 			//
@@ -115,8 +123,14 @@ namespace horn_verification
 				
 					
 				// Execute job
-				const auto new_slices = next_job->run(datapoint_ptrs, metadata);
 				
+				const auto new_slices = next_job->run(datapoint_ptrs, metadata);
+#ifdef SLC
+				std::cout << "Printing slices after split\n";
+				for(auto const &slice : new_slices){
+				  std::cout << slice << "\n";
+				}
+#endif 			
 				// Add new slices
 				for (const auto & sl : new_slices)
 				{
