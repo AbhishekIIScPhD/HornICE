@@ -356,10 +356,6 @@ namespace chc_teacher
 					unsigned num_vars = Z3_get_quantifier_num_bound(ctx, expr);
 					// Set of uninterpreted predicates occurring in the CHC
 					decl_set chc_declarations;
-			
-
-					expr_set rhs_predicate_expressions;
-					extract_relations(expr, chc_declarations, rhs_predicate_expressions);
 
 					//
 					// Substitute quantified variables by new constants

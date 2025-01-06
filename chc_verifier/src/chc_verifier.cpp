@@ -91,7 +91,8 @@ void learn1(z3::context & ctx, const problem & p, bool do_horndini_prephase, boo
 }
 
 
-void learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use_bounds)
+std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer>
+learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use_bounds)
 {
   INFUN;
 	// Prepare auxiliary variables and data structures
@@ -393,6 +394,7 @@ void learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, boo
 			std::cout << "CHC : " << pred << "\n";
 		}
 	}
+	return previous_conjectures;
 }
 
 
@@ -456,7 +458,7 @@ int main(int argc, char * argv[])
 
 	// File stem
 	auto filename = std::string(argv[optind]);
-	auto specGenFile = std::string(argv[optind++]);
+	auto specGenFile = std::string(argv[++optind]);
 
 	std::ofstream specFile(specGenFile, std::ios::trunc|std::ios::out);
 
@@ -481,8 +483,13 @@ int main(int argc, char * argv[])
 	// Learn
 	//
 	//learn1(ctx, p); // Simple (original)
-	learn2(ctx, p, do_horndini_prephase, use_bounds); // Improved?
-	specFile << sizeof(p) << "\n";
+	auto conjectures = learn2(ctx, p, do_horndini_prephase, use_bounds); // Improved?
+	specFile << conjectures.size() << "\n";
+	for (auto conjecture : conjectures) {
+		specFile << conjecture.first.name() << "\n";
+		specFile <<  conjecture.first << "\n";
+		specFile << "==>" << conjecture.second << "\n";
+	}
 	/*for (const auto & c : p){
 		std::cout << c.first << " => " << c.second << std::endl;
 	}*/

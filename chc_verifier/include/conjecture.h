@@ -69,41 +69,38 @@ namespace chc_teacher
 			{
 				out << (i == 0 ? "" : ", ") << c.variables[i];
 			}
-			out << "] -> " << c.expr;
+			out << "] -> " << removeFormatting(c.expr);
 			
 			return out;
 			
 		}
 
-	        static std::string removeFormatting(const z3::expr& expr) {
-		  std::string str = Z3_ast_to_string(expr.ctx(), expr);
-		  std::string result;
-		  result.reserve(str.length());
-    
-		  // Flag to track if we just added a space
-		  bool lastWasSpace = true;
-    
-		  for (const char c : str) {
-		    if (std::isspace(c)) {
-		      if (!lastWasSpace) {
-			result += ' ';
-			lastWasSpace = true;
-		      }
-		    } else {
-		      result += c;
-		      lastWasSpace = false;
-		    }
-		  }
-    
-		  // Remove trailing space if exists
-		  if (!result.empty() && result.back() == ' ') {
-		    result.pop_back();
-		  }
-    
-		  return result;
+		static std::string removeFormatting(const z3::expr& expr) {
+			std::string str = Z3_ast_to_string(expr.ctx(), expr);
+			std::string result;
+			result.reserve(str.length());
+
+			// Flag to track if we just added a space
+			bool lastWasSpace = true;
+
+			for (const char c : str) {
+				if (std::isspace(c)) {
+					if (!lastWasSpace) {
+						result += ' ';
+						lastWasSpace = true;
+					}
+				} else {
+					result += c;
+					lastWasSpace = false;
+				}
+			}
+			// Remove trailing space if exists
+			if (!result.empty() && result.back() == ' ') {
+				result.pop_back();
+			}
+			return result;
 		}
 	};
-
 }; // End namespace chc_teacher
 
 #endif
