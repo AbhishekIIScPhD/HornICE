@@ -355,8 +355,7 @@ namespace chc_teacher
 					// Total number of quantifier variables
 					unsigned num_vars = Z3_get_quantifier_num_bound(ctx, expr);
 					// Set of uninterpreted predicates occurring in the CHC
-					decl_set PLLab321
-					;
+					decl_set chc_declarations;
 			
 
 					expr_set rhs_predicate_expressions;

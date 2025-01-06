@@ -444,10 +444,9 @@ int main(int argc, char * argv[])
 				print_help(std::cout, argv[0]);
 				return EXIT_FAILURE;
 		}
-
 	}
 
-	if (optind != argc-1)
+	if (optind+2 != argc)
 	{
 		std::cout << "Invalid input file specified" << std::endl;
 		print_help(std::cout, argv[0]);
@@ -457,6 +456,10 @@ int main(int argc, char * argv[])
 
 	// File stem
 	auto filename = std::string(argv[optind]);
+	auto specGenFile = std::string(argv[optind++]);
+
+	std::ofstream specFile(specGenFile, std::ios::trunc|std::ios::out);
+
 
 
 	//
@@ -479,7 +482,11 @@ int main(int argc, char * argv[])
 	//
 	//learn1(ctx, p); // Simple (original)
 	learn2(ctx, p, do_horndini_prephase, use_bounds); // Improved?
-	
+	specFile << sizeof(p) << "\n";
+	/*for (const auto & c : p){
+		std::cout << c.first << " => " << c.second << std::endl;
+	}*/
+
 	/// Store the finishing time of execution.
 	std::clock_t c_end = std::clock();
 
