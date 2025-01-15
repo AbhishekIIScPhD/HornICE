@@ -30,6 +30,7 @@
 #include "dt_to_z3_exp.h"
 #include "pretty_print_visitor.h" // DEBUG
 
+#define EXTRA_ATTR
 #define DT
 namespace chc_teacher
 {

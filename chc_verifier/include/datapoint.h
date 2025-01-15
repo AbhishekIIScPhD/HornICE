@@ -16,6 +16,7 @@
 // Project includes
 #include "../../hice-dt/include/datapoint.h"
 
+#define EXTRA
 
 namespace chc_teacher
 {
