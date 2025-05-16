@@ -30,11 +30,13 @@
 #include "dt_to_z3_exp.h"
 #include "pretty_print_visitor.h" // DEBUG
 
-#define EXTRA_ATTR
-#define DT
+// #define EXTRA_ATTR
+// #define DT
+#define NEW
+
 namespace chc_teacher
 {
-	
+
 	/**
 	 * This class implements an interface to the lerning algorithm.
 	 */
@@ -165,38 +167,41 @@ namespace chc_teacher
 
 					api_object.add_integer_attribute(attributeName);
 
-				}		
+				}
 
-#ifdef EXTRA_ATTR
-				
+#ifdef NEW
+				 constructCustomAttrs(decl, attributes, chc_teacher::derived_predicates);
+#endif
+
+#ifdef EXTRA_3ATTR
+
 				//adding derived attributes
 				if(decl.arity() > 2)
 				  {
 				    for (unsigned first_index = 0; first_index < attributes.size(); first_index++) {
 				      for (unsigned second_index = first_index+1; second_index < attributes.size(); second_index++) {
-					for (unsigned third_index = first_index+2; third_index < attributes.size(); third_index++) {
-					  if (attributes.at(first_index).get_sort().is_int() && attributes.at(second_index).get_sort().is_int()&& attributes.at(third_index).get_sort().is_int()) {
+				      	for (unsigned third_index = first_index+2; third_index < attributes.size(); third_index++) {
+				      		if (attributes.at(first_index).get_sort().is_int() && attributes.at(second_index).get_sort().is_int() && attributes.at(third_index).get_sort().is_int()) {
+				      			std::vector<int> numbers;
+				      			numbers.push_back(first_index);
+				      			numbers.push_back(second_index);
+				      			numbers.push_back(third_index);
 
-					    std::vector<int> numbers;
-					    numbers.push_back(first_index);
-					    numbers.push_back(second_index);
-					    numbers.push_back(third_index);
+				      			std::sort(numbers.begin(), numbers.end());
 
-					    std::sort(numbers.begin(), numbers.end());
-
-					    // Generate all permutations using next_permutation
-					    do {
+				      			// Generate all permutations using next_permutation
+				      			do {
 					      std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
 					      firstAttributeStream << attributes.at(numbers[0]);
 					      secondAttributeStream << attributes.at(numbers[1]);
 					      thirdAttributeStream << attributes.at(numbers[2]);
 
 					      //==================
-					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) + attributes.at(numbers[1])+attributes.at(numbers[2]));
+					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) + attributes.at(numbers[1]) + attributes.at(numbers[2]));
 					      api_object.add_integer_attribute(firstAttributeStream.str() + "+" + secondAttributeStream.str() + "+" + thirdAttributeStream.str());
 					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) + attributes.at(numbers[1]) + attributes.at(numbers[2]) << "\n";
 
-					      //==================					      
+					      //==================
 					      integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(numbers[0]) - attributes.at(numbers[1])-attributes.at(numbers[2]));
 					      api_object.add_integer_attribute(firstAttributeStream.str() + "-" + secondAttributeStream.str() + "-" + thirdAttributeStream.str());
 					      std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(numbers[0]) - attributes.at(numbers[1]) - attributes.at(numbers[2]) << "\n";
@@ -217,33 +222,9 @@ namespace chc_teacher
 				      }
 				    }
 				  }
-#endif				
-				
-				// if( decl.name().str() == "inv2") {
-				// 	std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
+#endif
 
-				// 	firstAttributeStream << attributes.at(1);
-				// 	secondAttributeStream << attributes.at(2);
-				// 	thirdAttributeStream << attributes.at(3);
-
-				// 	integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(3) + attributes.at(2) - attributes.at(1));
-				// 	std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(3) + attributes.at(2) - attributes.at(1) << "args::"<< (attributes.at(3) + attributes.at(2) - attributes.at(1)).arg(0) <<"\n";
-				// 	api_object.add_integer_attribute(thirdAttributeStream.str() + "+" + secondAttributeStream.str() + "-" + firstAttributeStream.str());
-				// }
-
-				// if( decl.name().str() == "inv1") {
-				// 	std::stringstream firstAttributeStream, secondAttributeStream, thirdAttributeStream;
-
-				// 	firstAttributeStream << attributes.at(1);
-				// 	secondAttributeStream << attributes.at(2);
-				// 	thirdAttributeStream << attributes.at(3);
-
-				// 	integer_identifier_to_attribute.emplace(integer_identifier++, attributes.at(3) + attributes.at(2) - attributes.at(1));
-				// 	std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(3) + attributes.at(2) - attributes.at(1) << "\n";
-				// 	api_object.add_integer_attribute(thirdAttributeStream.str() + "+" + secondAttributeStream.str() + "-" + firstAttributeStream.str());
-				// }
-
-
+#ifdef EXTRA_2ATTR
 				//
 				// Adding derived attributes
 				//
@@ -269,11 +250,10 @@ namespace chc_teacher
 
 							api_object.add_integer_attribute(firstAttributeStream.str() + "-" + secondAttributeStream.str());
 							std::cout << __FUNCTION__ << "Derived Attribute Identifier : " << integer_identifier << " Derived attribute : " << attributes.at(first_index) - attributes.at(second_index) << "\n";
-							
-
 						}
 					}
 				}
+#endif
 				variables.push_back(std::move(attributes));
 				categorical_identifier++;
 				api_object.add_intervals(left, (integer_identifier - 1));
@@ -281,18 +261,120 @@ namespace chc_teacher
 			api_object.add_categorical_attribute("$func", categorical_identifier);
 		}
 
+
+z3::expr parseFlatInfixExpr(const std::string& exprStr,
+                            const std::map<std::string, int>& argID,
+                            std::vector<z3::expr> attributes) {
+    std::istringstream ss(exprStr);
+    std::vector<std::string> tokens{
+        std::istream_iterator<std::string>{ss},
+        std::istream_iterator<std::string>{}
+    };
+
+    if (tokens.empty())
+        throw std::runtime_error("Empty expression");
+
+    if (argID.count(tokens[0]) == 0)
+        throw std::runtime_error("Unknown variable: " + tokens[0]);
+
+	z3::expr result = attributes.at(argID.at(tokens[0]));
+	std::stringstream resultStream;
+	resultStream << result;
+
+	std::stringstream finalStream;
+
+    for (size_t i = 1; i + 1 < tokens.size(); i += 2) {
+        const std::string& op = tokens[i];
+        const std::string& var = tokens[i + 1];
+
+        if (argID.count(var) == 0)
+            throw std::runtime_error("Unknown variable: " + var);
+
+        const z3::expr& rhs = attributes.at(argID.at(var));
+    	std::stringstream attributeStream;
+    	attributeStream << rhs;
+
+        if (op == "+") {
+	        result = result + rhs;
+        	finalStream << resultStream.str() + "+" + attributeStream.str();
+        }
+        else if (op == "-") {
+	        result = result - rhs;
+        	finalStream << resultStream.str() + "-" + attributeStream.str();
+        }
+        else throw std::runtime_error("Unsupported operator: " + op);
+
+    	resultStream.str("");
+    	resultStream << finalStream.str();
+    	finalStream.str("");
+    }
+	std::stringstream attributeStream;
+			attributeStream << result;
+	integer_identifier_to_attribute.emplace(integer_identifier++, result);
+	api_object.add_integer_attribute(resultStream.str());
+    std::cout << __FUNCTION__
+			<< " Derived Attribute Identifier : " << integer_identifier
+			<< " Derived attribute : " << resultStream.str() << "\n";
+	std::cout << "result: " << result << "\n";
+	return result;
+}
+
+// Parses the input file into a list of predTemp structs
+std::vector<predTemp> parseInputFile(std::ifstream &relAttrs) const{
+    std::vector<predTemp> preds;
+    std::string line;
+
+    while (std::getline(relAttrs, line)) {
+        if (line.empty()) continue;
+
+        std::istringstream header(line);
+        predTemp p;
+        header >> p.relName >> p.numAttrs >> p.numDerAttr;
+
+        for (int i = 0; i < p.numAttrs && std::getline(relAttrs, line); ++i) {
+            std::istringstream attrLine(line);
+            int id;
+            std::string name;
+            attrLine >> id >> name;
+            p.argID[name] = id;
+        }
+
+        for (int i = 0; i < p.numDerAttr && std::getline(relAttrs, line); ++i) {
+            if (line.empty()) continue;
+            p.derAttr.push_back(line);
+        }
+        preds.push_back(std::move(p));
+    }
+    return preds;
+}
+
+
+int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, std::vector<predTemp> &derAttrs) {
+		for (const auto& p : derAttrs) {
+			std::cout << "Relation: " << p.relName << "\n";
+
+			if (decl.name().str().find(p.relName, 0) == -1) {
+				continue;
+			}
+			for (const auto& exprStr : p.derAttr) {
+				z3::expr zexpr = parseFlatInfixExpr(exprStr, p.argID, attributes);
+				std::cout << "  " << exprStr << " => " << zexpr << "\n";
+			}
+    }
+}
+
 	horn_verification::datapoint<bool>* get_unique_learner_datapoint(const chc_teacher::datapoint &teacher_datapoint) const {
 		std::cout << "In::" << __FUNCTION__ <<"\n";
 			std::cout << "=============\n";
 	  std::cout << __FUNCTION__ << "::Current Teacher Datapoint: " << teacher_datapoint << "\n";
-		if (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint) == teacher_datapoint_to_learner_datapoint.end()) { 
+		if (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint) == teacher_datapoint_to_learner_datapoint.end()) {
 
 			horn_verification::datapoint<bool> current_learner_datapoint(api_object.index_of_datapoint_ptrs());
 
 			horn_verification::attributes_metadata md = api_object.get_metadata();
-			
+
 			current_learner_datapoint._int_data = teacher_datapoint.get_int_data(relation_to_base_value, integer_identifier);
-				
+
 			current_learner_datapoint._categorical_data = teacher_datapoint.get_categorical_data(relation2ID);
 
 			// for (auto const &i : current_learner_datapoint._categorical_data){
@@ -446,30 +528,7 @@ namespace chc_teacher
 			decision_tree.accept(printer);
 			std::cout << "\n";
 #endif
-			//std::cout << "Hi" << std::endl;
 
-			// std::cout << "Call to map_dt_z3\n";
-			//
-			// std::cout << __FUNCTION__ << ":: Variables\n";
-			// for (auto const &var : variables) {
-			// 	for (auto const &v : var) {
-			// 		std::cout << " Variable :: " << v << "\n";
-			// 	}
-			// }
-			//
-			// std::cout << __FUNCTION__ << ":: Categorical Vars\n";
-			// for (auto const &cats : categorical_identifier_to_relation) {
-			// 		std::cout << " Int :: " << cats.first << "decl : " << cats.second << "\n";
-			// }
-			//
-			// int int_attr_no = 0;
-			// std::cout << __FUNCTION__ << ":: Integer Vars\n";
-			// for (auto const &ints : integer_identifier_to_attribute) {
-			// 	std::cout << " CAT :: " << ints.first << "expr : " << ints.second << "\n";
-			// 	std::cout << "Printed Attribute :: " << int_attr_no++ << "\n";
-			// }
-
-			// std::cout << "Done Printing\n";
 			dt_to_z3_exp map_dt_z3(variables, categorical_identifier_to_relation, integer_identifier_to_attribute);
 
 			std::cout << "Return from map_dt_z3\n";

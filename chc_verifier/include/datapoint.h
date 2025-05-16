@@ -14,13 +14,33 @@
 #include "z3++.h"
 
 // Project includes
-#include "../../hice-dt/include/datapoint.h"
+#include <filesystem>
+#include <iostream>
+#include <fstream>
+#include <map>
 
-#define EXTRA
+#include "../../hice-dt/include/datapoint.h"
+#include "../../chc_verifier/include/derived_pred.h"
+
+// #define EXTRA
+// #define OLD
+#define DEBUG
+#define NEW
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <unordered_set>
+#include <sstream>
+#include <cctype>
+#include <chc_verifier.h>
+#include <iterator>
 
 namespace chc_teacher
 {
-	
+
 	class datapoint
 	{
 
@@ -76,6 +96,53 @@ namespace chc_teacher
 			return true;
 		}
 
+
+void populateDerivedValues(const std::string& exprStr,
+                            const std::map<std::string, int>& argID) const {
+    std::istringstream ss(exprStr);
+    std::vector<std::string> tokens{
+        std::istream_iterator<std::string>{ss},
+        std::istream_iterator<std::string>{}
+    };
+
+    if (tokens.empty())
+        throw std::runtime_error("Empty expression");
+
+    if (argID.count(tokens[0]) == 0)
+        throw std::runtime_error("Unknown variable: " + tokens[0]);
+
+    z3::expr result = values.at(argID.at(tokens[0]));
+
+    for (size_t i = 1; i + 1 < tokens.size(); i += 2) {
+	    const std::string& op = tokens[i];
+    	const std::string& var = tokens[i + 1];
+
+    	if (argID.count(var) == 0)
+    		throw std::runtime_error("Unknown variable: " + var);
+
+    	const z3::expr& rhs = values.at(argID.at(var));
+
+    	if (op == "+")       result = result + rhs;
+    	else if (op == "-")  result = result - rhs;
+    	else throw std::runtime_error("Unsupported operator: " + op);
+    }
+	values.push_back(result.simplify());
+	std::cout << "result: " << result << "\n";
+}
+
+void getCustomAttrVals(std::vector<chc_teacher::predTemp> &derAttrs) const{
+		for (const auto& p : derAttrs) {
+			std::cout << "Relation: " << p.relName << "\n";
+
+			if (predicate.name().str().find(p.relName, 0) == -1) {
+				continue;
+			}
+			for (const auto& exprStr : p.derAttr) {
+				populateDerivedValues(exprStr, p.argID);
+			}
+    }
+}
+
 		std::vector<unsigned int> get_categorical_data(std::unordered_map<z3::func_decl, unsigned, ASTHasher, ASTComparer> relation2ID) const{
 
 			std::vector<unsigned int> _categorical_data;
@@ -106,41 +173,25 @@ namespace chc_teacher
 
 			std::cout << __FUNCTION__ <<"::Printing integer attributes\n";
 
-			// for (auto const attr:int_names){
-			//   std::cout << __FUNCTION__ <<"::Int Attr" << attr << "\n";
-			// }
-			
-// 			if (size_of_basic_attributes == 4){
-// #ifdef DEBUG
-// 			  std::cout << __FUNCTION__ << "Added new values to the integer value vector" << size_of_basic_attributes << "\n";
-// #endif
-// 			  values.push_back(((values.at(3) + values.at(2)) - values.at(1)).simplify());
-// 			  std::cout << __FUNCTION__ << "::Values at 3::" << values.at(3) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values at 2::" << values.at(2) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values at 1::" << values.at(1) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values added ::" << (values.at(3) + values.at(2) - values.at(1)).simplify();
-// 			}
-
 #ifdef EXTRA
-			if(size_of_basic_attributes > 2)
-			  {
-			    for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {
-			      for (unsigned second_index = first_index+1; second_index < size_of_basic_attributes; second_index++) {
-				for (unsigned third_index = first_index+2; third_index < size_of_basic_attributes; third_index++) {
-				  if (values.at(first_index).get_sort().is_int() && values.at(second_index).get_sort().is_int()&& values.at(third_index).get_sort().is_int()) {
-				    std::vector<int> numbers;
-				    numbers.push_back(first_index);
-				    numbers.push_back(second_index);
-				    numbers.push_back(third_index);
-				    
-				    std::sort(numbers.begin(), numbers.end());
+			if(size_of_basic_attributes > 2){
+				for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {
+					for (unsigned second_index = first_index+1; second_index < size_of_basic_attributes; second_index++) {
+						for (unsigned third_index = first_index+2; third_index < size_of_basic_attributes; third_index++) {
+							if (values.at(first_index).get_sort().is_int() && values.at(second_index).get_sort().is_int() &&
+								values.at(third_index).get_sort().is_int()) {
+								std::vector<int> numbers;
+								numbers.push_back(first_index);
+								numbers.push_back(second_index);
+								numbers.push_back(third_index);
+								std::sort(numbers.begin(), numbers.end());
 
 				    // Generate all permutations
 				    do {
 				      //==================
 				      values.push_back((values.at(numbers[0]) + values.at(numbers[1]) + values.at(numbers[2])).simplify());
 
-				      //==================					      
+				      //==================
 				      values.push_back((values.at(numbers[0]) - values.at(numbers[1]) - values.at(numbers[2])).simplify());
 
 				      //==================
@@ -152,11 +203,12 @@ namespace chc_teacher
 				    } while (std::next_permutation(numbers.begin(), numbers.end()));
 				  }
 				}
-			      }
-			    }
-			  }
+      }
+    }
+  }
 #endif
-			
+
+#ifdef OLD
 			for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {
 
 				for (unsigned second_index = first_index + 1; second_index < size_of_basic_attributes; second_index++) {
@@ -164,16 +216,22 @@ namespace chc_teacher
 					if (values.at(first_index).get_sort().is_int() && values.at(second_index).get_sort().is_int()) {
 
 						values.push_back((values.at(first_index) + values.at(second_index)).simplify());
+						std::cout << "value : " << (values.at(first_index) + values.at(second_index)).simplify() << "\n";
 
 						values.push_back((values.at(first_index) - values.at(second_index)).simplify());
+						std::cout << "value : " << (values.at(first_index) - values.at(second_index)).simplify() << "\n";
 					}
 				}
 			}
+#endif
+
+#ifdef NEW
+			getCustomAttrVals(chc_teacher::derived_predicates);
+#endif
 
 			std::vector<int> _int_data;
 
 			for (unsigned int_data_index = 0; int_data_index <= number_of_int_attributes; int_data_index++) {
-
 				if ((int_data_index < relation_to_base_value.find(predicate)->second)||(int_data_index >= (relation_to_base_value.find(predicate)->second + values.size()))) {
 					_int_data.push_back(0);
 				} else {

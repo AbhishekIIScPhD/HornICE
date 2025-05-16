@@ -19,9 +19,10 @@
 #include "chc_verifier.h"
 #include "conjecture.h"
 #include "learner_interface.h"
+#include "derived_pred.h"
 
 // #define DEBUG
-// #define OTHER
+#define OTHER_1
 #define CONJ
 // #define CONJ_1
 
@@ -376,9 +377,9 @@ learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use
 	for (const auto & c : previous_conjectures)
 	{
 	  std::cout << c.first << " => " << c.second << std::endl;
-	  std::cout << "Simplified Formual\n";
+	  //std::cout << "Simplified Formual\n";
 #ifdef OTHER_1
-	  std::cout << c.first << " => " << c.second.expr.simplify() << std::endl;
+	  //std::cout << c.first << " => " << c.second.expr.simplify() << std::endl;
 #endif
 	}
 
@@ -411,6 +412,39 @@ void print_help(std::ostream & out, const char * name)
 	out << "Options are:" << std::endl;
 	out << "  -b\t\tBound the learner" << std::endl;
 	out << "  -h\t\tRun Horndini pre-phase" << std::endl;
+}
+
+
+std::vector<predTemp> extractAttributes(std::ifstream &relAttrs) {
+
+	std::vector<predTemp> preds;
+	std::string line;
+
+	while (std::getline(relAttrs, line)) {
+		if (line.empty()) continue;
+
+		std::istringstream header(line);
+		chc_teacher::predTemp p;
+		header >> p.relName >> p.numAttrs >> p.numDerAttr;
+
+		for (int i = 0; i < p.numAttrs && std::getline(relAttrs, line); ++i) {
+			std::istringstream attrLine(line);
+			int id;
+			std::string name;
+			attrLine >> id >> name;
+			p.argID[name] = id;
+		}
+
+		// Read derived attributes until next header or EOF
+		for (int i = 0; i < p.numDerAttr && std::getline(relAttrs, line); ++i) {
+			if (line.empty()) continue;
+			p.derAttr.push_back(line);
+		}
+
+		preds.push_back(std::move(p));
+	}
+
+	return preds;
 }
 
 
@@ -448,7 +482,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	if (optind+2 != argc)
+	if (optind+3 != argc)
 	{
 		std::cout << "Invalid input file specified" << std::endl;
 		print_help(std::cout, argv[0]);
@@ -459,9 +493,11 @@ int main(int argc, char * argv[])
 	// File stem
 	auto filename = std::string(argv[optind]);
 	auto specGenFile = std::string(argv[++optind]);
-
+	auto relAttrFile = std::string(argv[++optind]);
 	std::ofstream specFile(specGenFile, std::ios::trunc|std::ios::out);
 
+	std::ifstream relAttrs(relAttrFile); // contains custom templates for each relation
+	if (!relAttrs) throw std::runtime_error("Failed to open file: " + filename);
 
 
 	//
@@ -483,6 +519,9 @@ int main(int argc, char * argv[])
 	// Learn
 	//
 	//learn1(ctx, p); // Simple (original)
+	std::vector<chc_teacher::predTemp> derPreds = extractAttributes(relAttrs);
+
+	chc_teacher::derived_predicates = derPreds;
 	auto conjectures = learn2(ctx, p, do_horndini_prephase, use_bounds); // Improved?
 	specFile << conjectures.size() << "\n";
 	for (auto conjecture : conjectures) {
