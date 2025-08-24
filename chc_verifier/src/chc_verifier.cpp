@@ -11,6 +11,11 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+
 // Z3 includes
 #include "z3++.h"
 
@@ -21,19 +26,208 @@
 #include "learner_interface.h"
 #include "derived_pred.h"
 
+
+
 // #define DEBUG
-#define OTHER_1
+//#define OTHER_1
 #define CONJ
+#define CTX
 // #define CONJ_1
 
 // #define COND if(learner_invocations == 57)
 
-#define COND if(true)
+#define COND if(false)
 
 #define INFUN std::cout<<"In "<<__FUNCTION__<<"\n"
 
 using namespace chc_teacher;
 
+
+std::list<std::unique_ptr<horn_counterexample>> g_all_counterexamples;
+ // Forward declaration for the helper functions
+ datapoint parse_datapoint(z3::context & ctx, const problem & p, std::string s);
+ std::list<datapoint> parse_datapoint_list(z3::context & ctx, const problem & p, std::string s);
+
+ /**
+  * @brief Parses a string representation of a single datapoint.
+  * e.g., "inv1(0, 1, 0, 0)"
+  */
+ datapoint parse_datapoint(z3::context & ctx, const problem & p, std::string s) {
+  //   s.erase(std::remove_if(s.begin(), s.end(), isspace), s.end());
+ 	   // Trim leading/trailing whitespace from the whole string first
+ 	   s.erase(0, s.find_first_not_of(" \t\n\r"));
+ 	   s.erase(s.find_last_not_of(" \t\n\r") + 1);
+
+     auto open_paren = s.find('(');
+     //auto close_paren = s.find(')');
+ 	   auto close_paren = s.rfind(')');
+
+     if (open_paren == std::string::npos || close_paren == std::string::npos) {
+         throw std::runtime_error("Invalid datapoint format: " + s);
+     }
+
+     std::string pred_name = s.substr(0, open_paren);
+     std::string args_str = s.substr(open_paren + 1, close_paren - open_paren - 1);
+
+     // Find the corresponding func_decl from the problem's relations
+     z3::func_decl predicate(ctx);
+     bool found = false;
+     for (const auto& rel : p.relations) {
+         if (rel.name().str() == pred_name) {
+             predicate = rel;
+             found = true;
+             break;
+         }
+     }
+
+     if (!found) {
+         throw std::runtime_error("Unknown predicate name: " +  pred_name);
+     }
+
+     // Parse arguments
+     std::vector<z3::expr> values;
+     std::stringstream ss(args_str);
+     std::string arg;
+     while (std::getline(ss, arg, ',')) {
+         if (arg.empty()) continue;
+         try {
+            	// Trim whitespace from the individual argument
+            	arg.erase(0, arg.find_first_not_of(" \t\n\r"));
+            	arg.erase(arg.find_last_not_of(" \t\n\r") + 1);
+
+            	if (arg == "true") {
+            		values.push_back(ctx.bool_val(true));
+            	} else if (arg == "false") {
+            		values.push_back(ctx.bool_val(false));
+            	} else {
+            		// Handle potential parens around negative numbers
+            		if (arg.front() == '(' && arg.back() == ')') {
+            			arg = arg.substr(1, arg.length() - 2);
+            			arg.erase(std::find(arg.begin(), arg.end(), ' '));
+            		}
+            		values.push_back(ctx.int_val(std::stoi(arg)));
+            	}
+           //values.push_back(ctx.int_val(std::stoi(arg)));
+           } catch (const std::invalid_argument& ia) {
+            throw std::runtime_error("Invalid integer argument: " + arg);
+            throw std::runtime_error("Invalid argument format: " + arg);
+           }
+             //values.push_back(ctx.int_val(std::stoi(arg)));
+         // } catch (const std::invalid_argument& ia) {
+         //     throw std::runtime_error("Invalid integer argument: " +  arg);
+         // }
+     }
+
+     return datapoint(predicate, std::move(values));
+ }
+
+ /**
+  * @brief Parses a string representation of a list of datapoints.
+  * e.g., "{inv1(0, 1, 0, 0), pu(0, 1)}"
+  */
+ std::list<datapoint> parse_datapoint_list(z3::context & ctx, const problem & p, std::string s) {
+     std::list<datapoint> dps;
+     //s.erase(std::remove(s.begin(), s.end(), ' '), s.end());
+
+ 	// Trim whitespace from the whole string
+ 	    s.erase(0, s.find_first_not_of(" \t\n\r"));
+ 	    s.erase(s.find_last_not_of(" \t\n\r") + 1);
+
+ 	    // if (s.length() <= 2) return dps; // Empty list "{}"
+ 	    if (s.length() <= 2 || s == "{}") return dps; // Empty list
+
+     if (s.length() <= 2) return dps;
+
+     s = s.substr(1, s.length() - 2);
+
+     size_t start = 0;
+     int paren_count = 0;
+     for (size_t i = 0; i < s.length(); ++i) {
+         if (s[i] == '(') {
+             paren_count++;
+         } else if (s[i] == ')') {
+             paren_count--;
+             if (paren_count == 0) {
+             	     // When a full "predicate(...)" is found, parse it
+							    if (i + 1 == s.length() || s[i+1] == ',') {
+							         dps.push_back(parse_datapoint(ctx, p, s.substr(start, i - start + 1)));
+							         start = i + 2; // Move past the ')' and the potential ','
+							    }
+                 // dps.push_back(parse_datapoint(ctx, p, s.substr(start, i - start + 1)));
+                 // start = i + 2;
+             }
+         }
+     }
+     return dps;
+ }
+
+ /**
+  * @brief Parses a string representation of a counterexample back into an object.
+  */
+ std::unique_ptr<horn_counterexample> parse_counterexample_from_string(z3::context & ctx, const problem & p, const std::string & line) {
+     auto separator = line.find("=>");
+     if (separator == std::string::npos) {
+         std::cerr << "Error: Invalid counterexample format (missing =>): " << line << std::endl;
+         return nullptr;
+     }
+
+     try {
+         std::string lhs_str = line.substr(0, separator);
+         std::string rhs_str = line.substr(separator + 2);
+
+         auto lhs = parse_datapoint_list(ctx, p, lhs_str);
+         auto rhs = parse_datapoint_list(ctx, p, rhs_str);
+
+         return std::make_unique<horn_counterexample>(std::move(lhs), std::move(rhs));
+     } catch (const std::exception& e) {
+         std::cerr << "Error parsing counterexample: " << e.what() << " in line: " << line << std::endl;
+         return nullptr;
+     }
+ }
+
+ /**
+  * @brief Loads a list of counterexamples from a given file.
+  */
+ std::list<std::unique_ptr<horn_counterexample>> load_counterexamples(z3::context & ctx, const problem & p, const std::string & filename) {
+     std::list<std::unique_ptr<horn_counterexample>> loaded_counterexamples;
+     std::ifstream infile(filename);
+     if (!infile) {
+         std::cerr << "Warning: Could not open counterexample input file: " << filename << std::endl;
+         return loaded_counterexamples;
+     }
+
+     std::string line;
+     const std::string prefix = "Counterexample: ";
+     while (std::getline(infile, line)) {
+         if (line.rfind(prefix, 0) == 0) {
+             std::string content = line.substr(prefix.length());
+             auto ce = parse_counterexample_from_string(ctx, p, content);
+             if (ce) {
+                 loaded_counterexamples.push_back(std::move(ce));
+             }
+         }
+     }
+     std::cout << "Loaded " << loaded_counterexamples.size() << " counterexamples from " << filename << std::endl;
+     return loaded_counterexamples;
+ }
+
+ /**
+  * @brief Dumps a list of counterexamples to a given file.
+  */
+ void dump_counterexamples(const std::list<std::unique_ptr<horn_counterexample>>& counterexamples, const std::string& filename) {
+     std::ofstream outfile(filename, std::ios::trunc | std::ios::out);
+     if (!outfile) {
+         std::cerr << "Error: Could not open counterexample output file: " << filename << std::endl;
+         return;
+     }
+
+     for (const auto &counter : counterexamples) {
+         if (counter) {
+             outfile << "Counterexample: " << *counter << "\n";
+         }
+     }
+     std::cout << "Dumped " << counterexamples.size() << " counterexamples to " << filename << std::endl;
+ }
 
 void learn1(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use_bounds)
 {
@@ -79,7 +273,8 @@ void learn1(z3::context & ctx, const problem & p, bool do_horndini_prephase, boo
 
 	
 	assert (chc_verifier::naive_check(ctx, p, previous_conjectures) == nullptr);
-	
+
+
 	//
 	// Output solution
 	//
@@ -93,6 +288,7 @@ void learn1(z3::context & ctx, const problem & p, bool do_horndini_prephase, boo
 
 
 std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer>
+//learn2(z3::context & ctx, problem & p, bool do_horndini_prephase, bool use_bounds, std::list<std::unique_ptr<horn_counterexample>> && seeded_counterexamples)
 learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use_bounds)
 {
   INFUN;
@@ -103,7 +299,16 @@ learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use
 	std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> previous_conjectures;
 	unsigned checked_chcs = 0;
 	unsigned learner_invocations = 0;
-	std::list<std::unique_ptr<horn_counterexample>> all_counterexamples;	
+	// std::list<std::unique_ptr<horn_counterexample>> all_counterexamples;
+
+ 	std::list<std::unique_ptr<horn_counterexample>> all_counterexamples = std::move(g_all_counterexamples);
+
+	// Seed the learner with pre-loaded counterexamples
+	for (const auto& ce : all_counterexamples) {
+	   if (ce) {
+	       learner.add_counterexample(*ce);
+	   }
+	}
 	
 	// All CHCs are unchecked
 	for (const auto & chc : p.chcs)
@@ -347,14 +552,19 @@ learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use
 		satisfied_chcs.insert(satisfied_chcs.end(), std::make_move_iterator(now_satisfied_chcs.begin()), std::make_move_iterator(now_satisfied_chcs.end()));
 
 
-#ifdef OTHER_1
-		if(unsatisfied_chcs.empty()){
+#ifdef CTX
+		//if(unsatisfied_chcs.empty()){
 		  std::cout << "Printing all the counter examples : " << all_counterexamples.size() << "\n";
 		  for (const auto &counter: all_counterexamples) {
 		    std::cout << "Counterexample: " << *counter << "\n";
 		  }		  
-		}
+		//}
 #endif
+std::cout << "Conjectures\n";
+		for (const auto & c : previous_conjectures)
+		{
+			std::cout << c.first << " => " << c.second << std::endl;
+		}
 
 		
 		// Add counterexamples 		
@@ -370,6 +580,10 @@ learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use
 	
 	assert (chc_verifier::naive_check(ctx, p, previous_conjectures) == nullptr);
 
+  // Move the final list of counterexamples back into the global variable
+ 	g_all_counterexamples = std::move(all_counterexamples);
+
+
 	//
 	// Output solution
 	//
@@ -379,7 +593,7 @@ learn2(z3::context & ctx, const problem & p, bool do_horndini_prephase, bool use
 	  std::cout << c.first << " => " << c.second << std::endl;
 	  //std::cout << "Simplified Formual\n";
 #ifdef OTHER_1
-	  //std::cout << c.first << " => " << c.second.expr.simplify() << std::endl;
+	  std::cout << c.first << " => " << c.second.expr.simplify() << std::endl;
 #endif
 	}
 
@@ -412,6 +626,7 @@ void print_help(std::ostream & out, const char * name)
 	out << "Options are:" << std::endl;
 	out << "  -b\t\tBound the learner" << std::endl;
 	out << "  -h\t\tRun Horndini pre-phase" << std::endl;
+ 	out << "  -f <file>\t file for counterexamples" << std::endl;
 }
 
 
@@ -460,10 +675,12 @@ int main(int argc, char * argv[])
 	// Process command line arguments
 	//
 	bool do_horndini_prephase = false;
-	bool use_bounds = false;
+	bool use_bounds = true;
+ 	std::string cex_file;
 
 	int c;
-	while ((c = getopt (argc, argv, "bh")) != -1)
+	//while ((c = getopt (argc, argv, "bh")) != -1)
+ 	while ((c = getopt (argc, argv, "bhf:")) != -1)
 	{
 
 		switch (c)
@@ -475,6 +692,10 @@ int main(int argc, char * argv[])
 			case 'h':
 				do_horndini_prephase = true;
 				break;
+
+			case 'f':
+			  cex_file = optarg;
+			  break;
 
 			default:
 				print_help(std::cout, argv[0]);
@@ -515,6 +736,12 @@ int main(int argc, char * argv[])
 	for(auto rel : p.relations) {
 		std::cout << "rel :: " << rel << "\n";
 	}
+
+ 	// Load counterexamples from file if specified
+  //std::list<std::unique_ptr<horn_counterexample>> seeded_counterexamples;
+  if (!cex_file.empty()) {
+      g_all_counterexamples = load_counterexamples(ctx, p, cex_file);
+  }
 	//
 	// Learn
 	//
@@ -523,6 +750,12 @@ int main(int argc, char * argv[])
 
 	chc_teacher::derived_predicates = derPreds;
 	auto conjectures = learn2(ctx, p, do_horndini_prephase, use_bounds); // Improved?
+
+ 	//auto conjectures = learn2(ctx, p, do_horndini_prephase, use_bounds, std::move(g_all_counterexamples)); // Improved?
+   // Dump all counterexamples to file if specified
+   if (!cex_file.empty()) {
+       dump_counterexamples(g_all_counterexamples, cex_file);
+  }
 	specFile << conjectures.size() << "\n";
 	for (auto conjecture : conjectures) {
 		specFile << conjecture.first.name() << "\n";

@@ -127,12 +127,16 @@ void populateDerivedValues(const std::string& exprStr,
     	else throw std::runtime_error("Unsupported operator: " + op);
     }
 	values.push_back(result.simplify());
+#ifdef DPH
 	std::cout << "result: " << result << "\n";
-}
+#endif
+		}
 
 void getCustomAttrVals(std::vector<chc_teacher::predTemp> &derAttrs) const{
 		for (const auto& p : derAttrs) {
+#ifdef DPH
 			std::cout << "Relation: " << p.relName << "\n";
+#endif
 
 			if (predicate.name().str().find(p.relName, 0) == -1) {
 				continue;
@@ -149,7 +153,7 @@ void getCustomAttrVals(std::vector<chc_teacher::predTemp> &derAttrs) const{
 
 			_categorical_data.push_back(relation2ID.find(predicate)->second);
 
-#ifdef DEBUG
+#ifdef DPH
 			std::cout << __FUNCTION__ << " Categorical Data Predicate : "<< " length :" << _categorical_data.end() - _categorical_data.begin() << predicate << " ID :" << relation2ID.find(predicate)->second << "\n";
 #endif		
 			// for (auto const cat: _categorical_data) {
@@ -165,14 +169,14 @@ void getCustomAttrVals(std::vector<chc_teacher::predTemp> &derAttrs) const{
 			//
 
 			auto size_of_basic_attributes = values.size();
-#ifdef DEBUG
+#ifdef DPH
 			std::cout << "In::" << __FUNCTION__ << "\n";
 
 			std::cout << __FUNCTION__ << ":: #Basic Attributes : " << size_of_basic_attributes << " Integer Attributes : " << number_of_int_attributes << "\n";
-#endif
+
 
 			std::cout << __FUNCTION__ <<"::Printing integer attributes\n";
-
+#endif
 #ifdef EXTRA
 			if(size_of_basic_attributes > 2){
 				for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {

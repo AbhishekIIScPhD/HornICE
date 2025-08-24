@@ -17,7 +17,7 @@ CPPFLAGS += -L ../../z3-4.7.1/build
 #CPPFLAGS += -O0 -g -std=c++14 -Ofast
 CPPFLAGS += -O0 -g -std=c++14
 
-all: chc_verifier
+all: clean chc_verifier
 
 chc_verifier: $(OBJS)
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) -fopenmp -o chc_verifier chc_verifier.cpp $(OBJS) ../../z3-4.7.1/build/z3.a

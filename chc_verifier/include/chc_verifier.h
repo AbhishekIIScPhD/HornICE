@@ -37,7 +37,7 @@ namespace chc_teacher
 		 */
 		static std::unique_ptr<horn_counterexample> naive_check(z3::context & ctx, const problem & p, const std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> & conjectures)
 		{
-			
+			std::cout << "In Naive Check\n";
 			//
 			// First, do some sanity checks
 			//
@@ -78,7 +78,7 @@ namespace chc_teacher
 		 */
 		static std::unique_ptr<horn_counterexample> check(z3::context & ctx, const problem & p, const std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> & new_conjectures, const std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> & old_conjectures)
 		{
-			
+			std::cout << "In check\n";
 			//
 			// First, do some sanity checks
 			//
@@ -182,7 +182,7 @@ namespace chc_teacher
 			// 1. Get CHC to check
 			//
 			z3::expr chc_expr = chc.expr;
-#ifdef DEBUG
+#ifdef DEBUG_CHCVERIF
 			std::cout << "Original expression is " << std::endl << chc_expr << std::endl;
 #endif
 
@@ -199,7 +199,7 @@ namespace chc_teacher
 				// Check that variable count matches
 				assert (pred_conjecture.variables.size() == decl.arity());
 
-#ifdef DEBUG
+#ifdef DEBUG_CHCVERIF
 				std::cout << "Substitutinng " << decl << " with " << pred_conjecture << std::endl;
 #endif
 				// Do substitution
@@ -207,7 +207,7 @@ namespace chc_teacher
 			
 			}
 
-#ifdef DEBUG
+#ifdef DEBUG_CHCVERIF
 			std::cout << "---------- CHC after substituting ----------" << std::endl;
 			std::cout << chc_expr << std::endl;
 #endif
@@ -220,7 +220,7 @@ namespace chc_teacher
 			z3::solver solver(ctx);
 			// Add negated CHC to solver
 			solver.add(!chc_expr);
-#ifdef DEBUG
+#ifdef DEBUG_CHCVERIF
 			std::cout << "---------- Solver ----------" << std::endl << solver << std::endl;
 #endif
 			
@@ -255,7 +255,7 @@ namespace chc_teacher
 				
 				// Get model
 				auto model = solver.get_model();
-#ifdef DEBUG
+#ifdef CHCVERIF
 				std::cout << "---------- Model ----------" << std::endl << model << std::endl;
 #endif
 				

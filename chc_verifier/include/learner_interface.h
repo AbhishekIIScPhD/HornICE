@@ -33,6 +33,7 @@
 // #define EXTRA_ATTR
 // #define DT
 #define NEW
+#define LIH_DTREE
 
 namespace chc_teacher
 {
@@ -94,7 +95,9 @@ namespace chc_teacher
 		 */
 		learner_interface(const decl_set & relations, bool do_horndini_prephase, bool use_bounds) {
 
+#ifdef DEBUG
 		  std::cout << "In " << __FUNCTION__ << "\n";
+#endif
 			categorical_identifier = 0;
 
 			integer_identifier = 0;
@@ -110,10 +113,14 @@ namespace chc_teacher
 			//
 			// Check number of argument of predicates
 			//
+#ifdef DEBUG
 			std::cout << __FUNCTION__ << ":: relations in the CHCs : \n";
+#endif
 			for (const auto & decl : relations)
 			{
+#ifdef DEBUG
 				std::cout << decl << "\n";
+#endif
 				if (decl.arity() == 0)
 				{
 					throw std::runtime_error("Uninterpreted predicates with no arguments are not allowed");
@@ -130,9 +137,9 @@ namespace chc_teacher
 				// Assign unique ID to relation
 				//
 				relation2ID.emplace(decl, categorical_identifier);
-
+#ifdef DEBUG
 				std::cout << __FUNCTION__ << " :: Relation : " << decl << " is mapped to CatID :  " << categorical_identifier << "\n";
-
+#endif
 				categorical_identifier_to_relation.emplace(categorical_identifier, decl);
 
 				std::cout << __FUNCTION__ << "CatID : " << categorical_identifier << " is mapped to Relation : " << decl << "\n";
@@ -312,10 +319,12 @@ z3::expr parseFlatInfixExpr(const std::string& exprStr,
 			attributeStream << result;
 	integer_identifier_to_attribute.emplace(integer_identifier++, result);
 	api_object.add_integer_attribute(resultStream.str());
+#ifdef LIH
     std::cout << __FUNCTION__
 			<< " Derived Attribute Identifier : " << integer_identifier
 			<< " Derived attribute : " << resultStream.str() << "\n";
 	std::cout << "result: " << result << "\n";
+#endif
 	return result;
 }
 
@@ -351,23 +360,28 @@ std::vector<predTemp> parseInputFile(std::ifstream &relAttrs) const{
 
 int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, std::vector<predTemp> &derAttrs) {
 		for (const auto& p : derAttrs) {
+#ifdef LIH
 			std::cout << "Relation: " << p.relName << "\n";
-
+#endif
 			if (decl.name().str().find(p.relName, 0) == -1) {
 				continue;
 			}
 			for (const auto& exprStr : p.derAttr) {
 				z3::expr zexpr = parseFlatInfixExpr(exprStr, p.argID, attributes);
+#ifdef LIH
 				std::cout << "  " << exprStr << " => " << zexpr << "\n";
+#endif
 			}
     }
 }
 
 	horn_verification::datapoint<bool>* get_unique_learner_datapoint(const chc_teacher::datapoint &teacher_datapoint) const {
+#ifdef LIH
 		std::cout << "In::" << __FUNCTION__ <<"\n";
 			std::cout << "=============\n";
 	  std::cout << __FUNCTION__ << "::Current Teacher Datapoint: " << teacher_datapoint << "\n";
-		if (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint) == teacher_datapoint_to_learner_datapoint.end()) {
+#endif
+			if (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint) == teacher_datapoint_to_learner_datapoint.end()) {
 
 			horn_verification::datapoint<bool> current_learner_datapoint(api_object.index_of_datapoint_ptrs());
 
@@ -377,13 +391,14 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 
 			current_learner_datapoint._categorical_data = teacher_datapoint.get_categorical_data(relation2ID);
 
-			// for (auto const &i : current_learner_datapoint._categorical_data){
-			//   std::cout << __FUNCTION__ << ":: Printing category data: " << i << "\n";
-			// }
-			// std::cout << "Current Learner Categorical data : " << current_learner_datapoint._categorical_data << "\n";
+#ifdef LIH
+			 for (auto const &i : current_learner_datapoint._categorical_data){
+			   std::cout << __FUNCTION__ << ":: Printing category data: " << i << "\n";
+			 }
+			 std::cout << "Current Learner Categorical data : " << current_learner_datapoint._categorical_data << "\n";
 			std::cout << __FUNCTION__ << ":: Current Teacher Datapoint: " << teacher_datapoint << "\n";
-			// std::cout << __FUNCTION__ << ":: Current Learner Datapoint: " << current_learner_datapoint << "\n";
-				
+			 std::cout << __FUNCTION__ << ":: Current Learner Datapoint: " << current_learner_datapoint << "\n";
+#endif
 			teacher_datapoint_to_learner_datapoint.emplace(teacher_datapoint, current_learner_datapoint);
 
 			//assert (teacher_datapoint_to_learner_datapoint.find(teacher_datapoint)->second._categorical_data.size() == 1);
@@ -415,7 +430,7 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 		 */
 		bool add_counterexample(const horn_counterexample & counterexample)
 		{
-		  std::cout << "In::"<< __FUNCTION__ << "\n";
+		  //std::cout << "In::"<< __FUNCTION__ << "\n";
 		        //
 			// This function should distinguish between real Horn counterexamples or positive
 			// counterexamples (left-hand-side is empty) or negative counterexample
@@ -433,13 +448,16 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 			  //   std::cout << "Printing the current counterexample :" << rhs << "\n";			    
 			  // }
 
+#ifdef LIH
 			  std::cout << __FUNCTION__ << " Current counterexample : " << counterexample << "\n";
 			  std::cout << __FUNCTION__ <<" Current teacher datapoint : " << *(counterexample.rhs.begin()) << "\n";
-			  
+#endif
 			  horn_verification::datapoint<bool> *current_learner_datapoint = get_unique_learner_datapoint(*(counterexample.rhs.begin()));
 
+#ifdef LIH
 			  std::cout << __FUNCTION__ <<" Current teacher datapoint(Positive) : " << *(counterexample.rhs.begin()) << "\n";
-			  // std::cout << __FUNCTION__ <<" Current learner datapoint(Positive) : " << *current_learner_datapoint << "\n";
+			  std::cout << __FUNCTION__ <<" Current learner datapoint(Positive) : " << *current_learner_datapoint << "\n";
+#endif
 				if (current_learner_datapoint->_is_classified == true) {
 
 					if (current_learner_datapoint->_classification == false) {
@@ -456,9 +474,10 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 			else if (counterexample.lhs.size() == 1 && counterexample.rhs.size() == 0) {
 
 				horn_verification::datapoint<bool> *current_learner_datapoint = get_unique_learner_datapoint(*(counterexample.lhs.begin()));
+#ifdef LIH
 				std::cout << __FUNCTION__ <<" Current teacher datapoint(Negative) : " << *(counterexample.lhs.begin()) << "\n";
-				// std::cout << __FUNCTION__ <<" Current learner datapoint(Negative) : " << *current_learner_datapoint << "\n";
-
+				std::cout << __FUNCTION__ <<" Current learner datapoint(Negative) : " << *current_learner_datapoint << "\n";
+#endif
 				
 				if (current_learner_datapoint->_is_classified == true) {
 
@@ -494,9 +513,10 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 				}
 
 				horn_verification::horn_constraint<bool> horn_constraint(lhs_of_horn, rhs_of_horn, false);
+#ifdef LIH
 				std::cout << __FUNCTION__ <<" Current teacher datapoint(horn) : " << counterexample << "\n";
-				// std::cout << __FUNCTION__ <<" Current learner datapoint(horn) : " << horn_constraint << "\n";
-				
+				std::cout << __FUNCTION__ <<" Current learner datapoint(horn) : " << horn_constraint << "\n";
+#endif
 				api_object.add_horn_constraints(horn_constraint);
 			}
 
@@ -518,12 +538,14 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 		 */
 		std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> get_conjectures()
 		{
+#ifdef LIH
 		        std::cout << "In :: " << __FUNCTION__ << "\n";
+#endif
 			auto decision_tree = api_object.learn_decision_tree();
 
 			horn_verification::pretty_print_visitor printer;
 
-#ifdef DT
+#ifdef LIH_DTREE
 			std::cout << __FUNCTION__ << ":: Printing the Decision Tree\n";
 			decision_tree.accept(printer);
 			std::cout << "\n";
@@ -531,7 +553,7 @@ int constructCustomAttrs(z3::func_decl decl, std::vector<z3::expr> attributes, s
 
 			dt_to_z3_exp map_dt_z3(variables, categorical_identifier_to_relation, integer_identifier_to_attribute);
 
-			std::cout << "Return from map_dt_z3\n";
+			//std::cout << "Return from map_dt_z3\n";
 			return map_dt_z3.get_unordered_map(decision_tree.root());
 		}
 

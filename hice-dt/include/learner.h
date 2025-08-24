@@ -49,8 +49,9 @@ namespace horn_verification
 		learner(const JobManager & manager)
 			: _manager(manager)
 		{
+#ifdef LEA
 		  std::cout << "In :: " << __PRETTY_FUNCTION__ << "\n";
-
+#endif
 			// Nothing
 		}
 	
@@ -62,10 +63,46 @@ namespace horn_verification
 		learner(JobManager && manager)
 			: _manager(std::move(manager))
 		{
+#ifdef LEA
 		  std::cout << "In :: " << __PRETTY_FUNCTION__ << "\n";
 			// Nothing
+#endif
 		}
-	
+
+		void print_datapoints(const std::vector<datapoint<bool> *> & datapoint_ptrs, std::ostream & out) {
+			out << "--- Datapoint Contents (" << datapoint_ptrs.size() << " items) ---\n";
+			int index = 0;
+			for (const auto* ptr : datapoint_ptrs) {
+				out << "[" << index++ << "]: ";
+				if (ptr == nullptr) {
+					out << "nullptr\n";
+					continue;
+				}
+				const auto& dp = *ptr;
+				if (dp._is_classified) {
+					out << "Class: " << std::boolalpha << dp._classification;
+				} else {
+					out << "Class: Unclassified";
+				}
+				out << " | Cat: {";
+				for (size_t i = 0; i < dp._categorical_data.size(); ++i) {
+					out << "\"" << dp._categorical_data[i] << "\"";
+					if (i < dp._categorical_data.size() - 1) {
+						out << ", ";
+					}
+				}
+				out << "}";
+				out << " | Int: {";
+				for (size_t i = 0; i < dp._int_data.size(); ++i) {
+					out << dp._int_data[i];
+					if (i < dp._int_data.size() - 1) {
+						out << ", ";
+					}
+				}
+				out << "}\n";
+			}
+			out << "-------------------------------------------\n";
+		}
 	
 		/**
 		 * Learns a decision tree that is consistent with a given set of data points and horn constraints.
@@ -80,7 +117,7 @@ namespace horn_verification
 		 */
 		decision_tree learn(const attributes_metadata & metadata, std::vector<datapoint<bool> *> & datapoint_ptrs, const std::vector<horn_constraint<bool>> & horn_constraints)
 		{
-		  std::cout << "In:: " << __FUNCTION__ << "\n";
+		  //std::cout << "In:: " << __FUNCTION__ << "\n";
 			
 			//
 			// If no data points were given, return trivial decision tree (any tree is consistent)
@@ -107,8 +144,7 @@ namespace horn_verification
 			//
 			slice sl = slice(0, datapoint_ptrs.size() - 1, &tree._root);
 			_manager.add_slice(sl);
-#ifdef slice
-
+#ifdef LEH
 			std::cout << __FUNCTION__ << "::Printing Slice :" << sl << "\n";
 #endif
 
