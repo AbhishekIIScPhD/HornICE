@@ -132,7 +132,7 @@ namespace chc_teacher
                             throw std::runtime_error("Unsupported operator: " +
                                                      op);
                     }
-                    values.push_back(result.simplify());
+                    derived_values.push_back(result.simplify());
 #ifdef DPH
                     std::cout << "result: " << result << "\n";
 #endif
@@ -298,7 +298,7 @@ namespace chc_teacher
                     }
 #endif
 
-                    std::vector<z3::expr> values_for_learning(values);
+                    std::vector<z3::expr> values_for_learning;
 #ifdef NEW
                     // getCustomAttrVals(chc_teacher::derived_predicates);
                     getCustomAttrVals(values_for_learning,

@@ -178,14 +178,15 @@ class learner_interface {
 
                 attributes.push_back(
                     decl.ctx().constant(attributeName.c_str(), attributeSort));
-                integer_identifier_to_attribute.emplace(
-                    integer_identifier++,
-                    decl.ctx().constant(attributeName.c_str(), attributeSort));
+                // integer_identifier_to_attribute.emplace(
+                //     integer_identifier++,
+                //     decl.ctx().constant(attributeName.c_str(),
+                //     attributeSort));
                 std::cout << "Attribute Identifier : " << integer_identifier
                           << " attribute : " << attributeName.c_str()
                           << attributeSort << "\n";
 
-                api_object.add_integer_attribute(attributeName);
+                // api_object.add_integer_attribute(attributeName);
             }
 
 #ifdef NEW
@@ -477,7 +478,8 @@ class learner_interface {
 #ifdef LIH
             std::cout << "Relation: " << p.relName << "\n";
 #endif
-            if (decl.name().str().find(p.relName, 0) == -1) {
+            // if (decl.name().str().find(p.relName, 0) == -1) {
+            if (decl.name().str() != p.relName) {
                 continue;
             }
             for (const auto &exprStr : p.derAttr) {
