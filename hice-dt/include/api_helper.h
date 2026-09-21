@@ -143,8 +143,9 @@ void print_help(std::ostream & out, const char * name)
 
 decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 
+#ifdef APH
   std::cout << "In :: " << __FUNCTION__ << "\n";
-  
+#endif
 	//
 	// Run the learner and allow a graceful exit if something goes wrong
 	//
@@ -169,7 +170,7 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 		//
 		// Create bounds
 		//
-		bound<> cur_bound (1, use_bounds);
+		bound<> cur_bound (10, use_bounds);
 
 		
 		/************************************************************************************
@@ -367,7 +368,9 @@ decision_tree learn_decision_tree (bool do_horndini_prephase, bool use_bounds) {
 				auto ns = NodeSelection::BFS;
 				auto ec = EntropyComputation::PENALTY;
 				auto cs = ConjunctiveSetting::NOPREFERENCEFORCONJUNCTS;
-				auto manager = cur_bound.use_bound() ? complex_job_manager(datapoint_ptrs, horn_constraints, solver, cur_bound.get_bound(), ns, ec, cs) : complex_job_manager(datapoint_ptrs, horn_constraints, solver, ns, ec, cs);
+				auto manager = cur_bound.use_bound() ?
+					complex_job_manager(datapoint_ptrs, horn_constraints, solver, cur_bound.get_bound(), ns, ec, cs) :
+				complex_job_manager(datapoint_ptrs, horn_constraints, solver, ns, ec, cs);
 				learner<complex_job_manager> l(manager);
 				auto decision_tree = l.learn(metadata, datapoint_ptrs, horn_constraints);
 

@@ -14,13 +14,33 @@
 #include "z3++.h"
 
 // Project includes
-#include "../../hice-dt/include/datapoint.h"
+#include <filesystem>
+#include <iostream>
+#include <fstream>
+#include <map>
 
-#define EXTRA
+#include "../../hice-dt/include/datapoint.h"
+#include "../../chc_verifier/include/derived_pred.h"
+
+// #define EXTRA
+// #define OLD
+#define DEBUG
+#define NEW
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <unordered_set>
+#include <sstream>
+#include <cctype>
+#include <chc_verifier.h>
+#include <iterator>
 
 namespace chc_teacher
 {
-	
+
 	class datapoint
 	{
 
@@ -76,13 +96,77 @@ namespace chc_teacher
 			return true;
 		}
 
-		std::vector<unsigned int> get_categorical_data(std::unordered_map<z3::func_decl, unsigned, ASTHasher, ASTComparer> relation2ID) const{
+                void populateDerivedValues(
+                    std::vector<z3::expr> &derived_values,
+                    const std::string &exprStr,
+                    const std::map<std::string, int> &argID) const {
+                    std::istringstream ss(exprStr);
+                    std::vector<std::string> tokens{
+                        std::istream_iterator<std::string>{ss},
+                        std::istream_iterator<std::string>{}};
+
+                    if (tokens.empty())
+                        throw std::runtime_error("Empty expression");
+
+                    if (argID.count(tokens[0]) == 0)
+                        throw std::runtime_error("Unknown variable: " +
+                                                 tokens[0]);
+
+                    z3::expr result = values.at(argID.at(tokens[0]));
+
+                    for (size_t i = 1; i + 1 < tokens.size(); i += 2) {
+                        const std::string &op = tokens[i];
+                        const std::string &var = tokens[i + 1];
+
+                        if (argID.count(var) == 0)
+                            throw std::runtime_error("Unknown variable: " +
+                                                     var);
+
+                        const z3::expr &rhs = values.at(argID.at(var));
+
+                        if (op == "+")
+                            result = result + rhs;
+                        else if (op == "-")
+                            result = result - rhs;
+                        else
+                            throw std::runtime_error("Unsupported operator: " +
+                                                     op);
+                    }
+                    derived_values.push_back(result.simplify());
+#ifdef DPH
+                    std::cout << "result: " << result << "\n";
+#endif
+                }
+
+                void getCustomAttrVals(
+                    std::vector<z3::expr> &derived_values,
+                    std::vector<chc_teacher::predTemp> &derAttrs) const {
+                    for (const auto &p : derAttrs) {
+#ifdef DPH
+                        std::cout << "Relation: " << p.relName << "\n";
+#endif
+
+                        // if (predicate.name().str().find(p.relName, 0) == -1)
+                        // {
+                        if (predicate.name().str() != p.relName) {
+                            continue;
+                        }
+                        for (const auto &exprStr : p.derAttr) {
+                            // populateDerivedValues(exprStr,
+                            //                       p.argID);
+                            populateDerivedValues(derived_values, exprStr,
+                                                  p.argID);
+                        }
+                    }
+                }
+
+                std::vector<unsigned int> get_categorical_data(std::unordered_map<z3::func_decl, unsigned, ASTHasher, ASTComparer> relation2ID) const{
 
 			std::vector<unsigned int> _categorical_data;
 
 			_categorical_data.push_back(relation2ID.find(predicate)->second);
 
-#ifdef DEBUG
+#ifdef DPH
 			std::cout << __FUNCTION__ << " Categorical Data Predicate : "<< " length :" << _categorical_data.end() - _categorical_data.begin() << predicate << " ID :" << relation2ID.find(predicate)->second << "\n";
 #endif		
 			// for (auto const cat: _categorical_data) {
@@ -91,113 +175,187 @@ namespace chc_teacher
 			return _categorical_data;
 		}
 
-	  std::vector<int> get_int_data(std::unordered_map<z3::func_decl, unsigned, ASTHasher, ASTComparer> relation_to_base_value, unsigned number_of_int_attributes) const{
+                std::vector<int>
+                get_int_data(std::unordered_map<z3::func_decl, unsigned,
+                                                ASTHasher, ASTComparer>
+                                 relation_to_base_value,
+                             unsigned number_of_int_attributes) const {
 
-			//
-			// Adding derived attributes
-			//
+                    //
+                    // Adding derived attributes
+                    //
 
-			auto size_of_basic_attributes = values.size();
-#ifdef DEBUG
-			std::cout << "In::" << __FUNCTION__ << "\n";
+                    auto size_of_basic_attributes = values.size();
+#ifdef DPH
+                    std::cout << "In::" << __FUNCTION__ << "\n";
 
-			std::cout << __FUNCTION__ << ":: #Basic Attributes : " << size_of_basic_attributes << " Integer Attributes : " << number_of_int_attributes << "\n";
+                    std::cout
+                        << __FUNCTION__
+                        << ":: #Basic Attributes : " << size_of_basic_attributes
+                        << " Integer Attributes : " << number_of_int_attributes
+                        << "\n";
+
+                    std::cout << __FUNCTION__
+                              << "::Printing integer attributes\n";
 #endif
-
-			std::cout << __FUNCTION__ <<"::Printing integer attributes\n";
-
-			// for (auto const attr:int_names){
-			//   std::cout << __FUNCTION__ <<"::Int Attr" << attr << "\n";
-			// }
-			
-// 			if (size_of_basic_attributes == 4){
-// #ifdef DEBUG
-// 			  std::cout << __FUNCTION__ << "Added new values to the integer value vector" << size_of_basic_attributes << "\n";
-// #endif
-// 			  values.push_back(((values.at(3) + values.at(2)) - values.at(1)).simplify());
-// 			  std::cout << __FUNCTION__ << "::Values at 3::" << values.at(3) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values at 2::" << values.at(2) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values at 1::" << values.at(1) << "\n";
-// 			  std::cout << __FUNCTION__ << "::Values added ::" << (values.at(3) + values.at(2) - values.at(1)).simplify();
-// 			}
-
 #ifdef EXTRA
-			if(size_of_basic_attributes > 2)
-			  {
-			    for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {
-			      for (unsigned second_index = first_index+1; second_index < size_of_basic_attributes; second_index++) {
-				for (unsigned third_index = first_index+2; third_index < size_of_basic_attributes; third_index++) {
-				  if (values.at(first_index).get_sort().is_int() && values.at(second_index).get_sort().is_int()&& values.at(third_index).get_sort().is_int()) {
-				    std::vector<int> numbers;
-				    numbers.push_back(first_index);
-				    numbers.push_back(second_index);
-				    numbers.push_back(third_index);
-				    
-				    std::sort(numbers.begin(), numbers.end());
+                    if (size_of_basic_attributes > 2) {
+                        for (unsigned first_index = 0;
+                             first_index < size_of_basic_attributes;
+                             first_index++) {
+                            for (unsigned second_index = first_index + 1;
+                                 second_index < size_of_basic_attributes;
+                                 second_index++) {
+                                for (unsigned third_index = first_index + 2;
+                                     third_index < size_of_basic_attributes;
+                                     third_index++) {
+                                    if (values.at(first_index)
+                                            .get_sort()
+                                            .is_int() &&
+                                        values.at(second_index)
+                                            .get_sort()
+                                            .is_int() &&
+                                        values.at(third_index)
+                                            .get_sort()
+                                            .is_int()) {
+                                        std::vector<int> numbers;
+                                        numbers.push_back(first_index);
+                                        numbers.push_back(second_index);
+                                        numbers.push_back(third_index);
+                                        std::sort(numbers.begin(),
+                                                  numbers.end());
 
-				    // Generate all permutations
-				    do {
-				      //==================
-				      values.push_back((values.at(numbers[0]) + values.at(numbers[1]) + values.at(numbers[2])).simplify());
+                                        // Generate all permutations
+                                        do {
+                                            //==================
+                                            values.push_back(
+                                                (values.at(numbers[0]) +
+                                                 values.at(numbers[1]) +
+                                                 values.at(numbers[2]))
+                                                    .simplify());
 
-				      //==================					      
-				      values.push_back((values.at(numbers[0]) - values.at(numbers[1]) - values.at(numbers[2])).simplify());
+                                            //==================
+                                            values.push_back(
+                                                (values.at(numbers[0]) -
+                                                 values.at(numbers[1]) -
+                                                 values.at(numbers[2]))
+                                                    .simplify());
 
-				      //==================
-				      values.push_back((values.at(numbers[0]) + values.at(numbers[1]) - values.at(numbers[2])).simplify());
+                                            //==================
+                                            values.push_back(
+                                                (values.at(numbers[0]) +
+                                                 values.at(numbers[1]) -
+                                                 values.at(numbers[2]))
+                                                    .simplify());
 
-				      //==================
-				      values.push_back((values.at(numbers[0]) - values.at(numbers[1]) + values.at(numbers[2])).simplify());
+                                            //==================
+                                            values.push_back(
+                                                (values.at(numbers[0]) -
+                                                 values.at(numbers[1]) +
+                                                 values.at(numbers[2]))
+                                                    .simplify());
 
-				    } while (std::next_permutation(numbers.begin(), numbers.end()));
-				  }
-				}
-			      }
-			    }
-			  }
+                                        } while (std::next_permutation(
+                                            numbers.begin(), numbers.end()));
+                                    }
+                                }
+                            }
+                        }
+                    }
 #endif
-			
-			for (unsigned first_index = 0; first_index < size_of_basic_attributes; first_index++) {
 
-				for (unsigned second_index = first_index + 1; second_index < size_of_basic_attributes; second_index++) {
+#ifdef OLD
+                    for (unsigned first_index = 0;
+                         first_index < size_of_basic_attributes;
+                         first_index++) {
 
-					if (values.at(first_index).get_sort().is_int() && values.at(second_index).get_sort().is_int()) {
+                        for (unsigned second_index = first_index + 1;
+                             second_index < size_of_basic_attributes;
+                             second_index++) {
 
-						values.push_back((values.at(first_index) + values.at(second_index)).simplify());
+                            if (values.at(first_index).get_sort().is_int() &&
+                                values.at(second_index).get_sort().is_int()) {
 
-						values.push_back((values.at(first_index) - values.at(second_index)).simplify());
-					}
-				}
-			}
+                                values.push_back((values.at(first_index) +
+                                                  values.at(second_index))
+                                                     .simplify());
+                                std::cout << "value : "
+                                          << (values.at(first_index) +
+                                              values.at(second_index))
+                                                 .simplify()
+                                          << "\n";
 
-			std::vector<int> _int_data;
+                                values.push_back((values.at(first_index) -
+                                                  values.at(second_index))
+                                                     .simplify());
+                                std::cout << "value : "
+                                          << (values.at(first_index) -
+                                              values.at(second_index))
+                                                 .simplify()
+                                          << "\n";
+                            }
+                        }
+                    }
+#endif
 
-			for (unsigned int_data_index = 0; int_data_index <= number_of_int_attributes; int_data_index++) {
+                    std::vector<z3::expr> values_for_learning;
+#ifdef NEW
+                    // getCustomAttrVals(chc_teacher::derived_predicates);
+                    getCustomAttrVals(values_for_learning,
+                                      chc_teacher::derived_predicates);
+#endif
 
-				if ((int_data_index < relation_to_base_value.find(predicate)->second)||(int_data_index >= (relation_to_base_value.find(predicate)->second + values.size()))) {
-					_int_data.push_back(0);
-				} else {
-					for (const auto & expr : values) {
-						assert (expr.is_const());
-						int value;
-						if (expr.is_bool()) {
-							value = expr.bool_value(); // Bool value (should be casted to int as well), implicit conversion happens here
-						} else if (expr.is_int()) {
-							auto conversion_result = Z3_get_numeral_int(expr.ctx(), expr, &value); // Integer value
-							assert (conversion_result);
-						} else {
-							throw std::runtime_error("Unsupported value type"); // Unsupported type of value
-						}
-						_int_data.push_back(value);
-						int_data_index++;
-					}
-				}
-			}
-			return _int_data;
-		}
+                    std::vector<int> _int_data;
 
-		
-		friend std::ostream & operator<<(std::ostream & out, const datapoint & dp)
+                    for (unsigned int_data_index = 0;
+                         int_data_index <= number_of_int_attributes;
+                         int_data_index++) {
+                        // if ((int_data_index <
+                        //      relation_to_base_value.find(predicate)->second)
+                        //      ||
+                        //     (int_data_index >=
+                        //      (relation_to_base_value.find(predicate)->second
+                        //      +
+                        //       values.size()))) {
+
+                        if ((int_data_index <
+                             relation_to_base_value.find(predicate)->second) ||
+                            (int_data_index >=
+                             (relation_to_base_value.find(predicate)->second +
+                              values_for_learning.size()))) {
+                            _int_data.push_back(0);
+                        } else {
+                            // for (const auto &expr : values) {
+                            for (const auto &expr : values_for_learning) {
+                                assert(expr.is_const());
+                                int value;
+                                if (expr.is_bool()) {
+                                    value =
+                                        expr.bool_value(); // Bool value (should
+                                                           // be casted to int
+                                                           // as well), implicit
+                                                           // conversion happens
+                                                           // here
+                                } else if (expr.is_int()) {
+                                    auto conversion_result = Z3_get_numeral_int(
+                                        expr.ctx(), expr,
+                                        &value); // Integer value
+                                    assert(conversion_result);
+                                } else {
+                                    throw std::runtime_error(
+                                        "Unsupported value type"); // Unsupported
+                                                                   // type of
+                                                                   // value
+                                }
+                                _int_data.push_back(value);
+                                int_data_index++;
+                            }
+                        }
+                    }
+                    return _int_data;
+                }
+
+                friend std::ostream & operator<<(std::ostream & out, const datapoint & dp)
 		{
 		
 			out << dp.predicate.name() << "(";

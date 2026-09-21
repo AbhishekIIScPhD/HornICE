@@ -46,7 +46,7 @@ namespace chc_teacher
 
 			std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> get_unordered_map(horn_verification::base_node *node) const {
 
-				std::cout << "In::" << __FUNCTION__ << "\n";
+				// std::cout << "In::" << __FUNCTION__ << "\n";
 				std::unordered_map<z3::func_decl, conjecture, ASTHasher, ASTComparer> map_z3_expr;
 
 				horn_verification::categorical_node* categorical_child = dynamic_cast<horn_verification::categorical_node*> (node);

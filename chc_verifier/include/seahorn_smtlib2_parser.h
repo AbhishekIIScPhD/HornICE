@@ -188,12 +188,15 @@ namespace chc_teacher
 					assert (expr.decl().name().str() != "verifier.error");
 					assert (!is_negated);
 					// TODO: check that the expressions in the arguments do not contain predicates to synthesize
-
+#ifdef DEBUG
 					std::cout << "SMTlIB :: expr : " << expr << "\n";
+#endif
 					// Store expression of predicate
 					relation_expressions.insert(expr);
 
+#ifdef DEBUG
 					std::cout << "SMTlIB :: expr_decl : " << expr.decl() << "\n";
+#endif
 					// Store declaration of predicates
 					relations.insert(expr.decl());
 					
@@ -255,8 +258,8 @@ namespace chc_teacher
 			{
 				const auto & expr = queries[i];
 
-				std::cout << "\n---------- Query " << i << " ----------" << std::endl;
-				std::cout << expr << std::endl;
+				//std::cout << "\n---------- Query " << i << " ----------" << std::endl;
+				//std::cout << expr << std::endl;
 
 
 				// Normal query
@@ -307,8 +310,8 @@ namespace chc_teacher
 				
 				const auto & expr = rules[i];
 				
-				std::cout << "\n---------- Rule " << i << " ----------" << std::endl;
-				std::cout << expr << std::endl;
+				//std::cout << "\n---------- Rule " << i << " ----------" << std::endl;
+				//std::cout << expr << std::endl;
 				
 				
 				//

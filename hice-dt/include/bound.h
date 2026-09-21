@@ -7,7 +7,7 @@
 
 // C++ includes
 #include <fstream>
-
+#define BND
 
 namespace horn_verification
 {
@@ -20,7 +20,7 @@ namespace horn_verification
 	 *
 	 * @version 1.0
 	 */
-	template <int MAX_BOUND = 20>
+	template <int MAX_BOUND = 1000>
 	class bound
 	{
 		
@@ -38,10 +38,13 @@ namespace horn_verification
 		 * @param bound The bound to use_bound
 		 * @param use_bound Indicates whether the bound is to be used
 		 */
-		bound(int bound = 1, bool use_bound = true)
+		bound(int bound = 0, bool use_bound = true)
 			: _bound(bound), _use_bound(use_bound)
 		{
+#ifdef BND
+			std::cout << "The bound is :: " << bound << "\n";
 			// Nothing
+#endif
 		}
 		
 		
